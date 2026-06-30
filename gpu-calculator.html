@@ -1,0 +1,2426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>On-Premises GPU Requirements Calculator</title>
+  <style>
+    :root {
+      /* Apple-inspired dark palette */
+      --bg-base:#000000;
+      --bg-panel:#0d0d0d;
+      --bg-card:#1c1c1e;
+      --bg-card2:#2c2c2e;
+      --bg-input:#3a3a3c;
+      --border:rgba(255,255,255,0.08);
+      --border-hi:rgba(255,255,255,0.13);
+      /* Text — silver-white */
+      --text-hi:#f5f5f7;
+      --text-mid:#d1d1d6;
+      --text-dim:#a0a0a8;
+      --text-mute:#6e6e73;
+      /* Accent: green */
+      --accent:#30d158;
+      --accent-dim:#25a244;
+      --accent-lit:#4cd964;
+      --accent-tint:rgba(48,209,88,0.08);
+      --accent-glow:rgba(48,209,88,0.22);
+      /* Status */
+      --accent-green:#30d158;
+      --warn-amber:#ff9f0a;
+      --warn-purple:#bf5af2;
+      --warn-red:#ff453a;
+      --warn-blue:#64d2ff;
+      /* Radius — Apple-scale */
+      --r-sm:8px;
+      --r-md:10px;
+      --r-lg:14px;
+      --r-xl:18px;
+      --r-pill:980px;
+      /* Shadows */
+      --shadow-sm:0 2px 8px rgba(0,0,0,0.45);
+      --shadow-md:0 8px 32px rgba(0,0,0,0.55);
+      /* Aliases kept for backward compat */
+      --fg:#c7c7cc;
+      --muted:#6e6e73;
+    }
+    /* ── Light theme overrides ── */
+    body.light{
+      --bg-base:#f5f5f7;
+      --bg-panel:#ebebf0;
+      --bg-card:#ffffff;
+      --bg-card2:#f0f0f5;
+      --bg-input:#e5e5ea;
+      --border:rgba(0,0,0,0.08);
+      --border-hi:rgba(0,0,0,0.14);
+      --text-hi:#1d1d1f;
+      --text-mid:#3a3a3c;
+      --text-dim:#6e6e73;
+      --text-mute:#8e8e93;
+      --accent:#1d8a3c;
+      --accent-dim:#166c2e;
+      --accent-lit:#25a244;
+      --accent-tint:rgba(29,138,60,0.08);
+      --accent-glow:rgba(29,138,60,0.18);
+      --accent-green:#1d8a3c;
+      --shadow-sm:0 2px 8px rgba(0,0,0,0.10);
+      --shadow-md:0 8px 32px rgba(0,0,0,0.14);
+      --fg:#3a3a3c;
+      --muted:#8e8e93;
+    }
+    body.light .app-header{background:rgba(245,245,247,0.88);}
+    body.light .mode-btn.active{background:#1d1d1f;color:#fff;}
+    body.light #glossary-panel{background:rgba(250,250,252,0.97);}
+    body.light #glossary-overlay{background:rgba(0,0,0,0.3);}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--bg-base);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",sans-serif;
+      color:var(--text-mid);font-size:13px;line-height:1.5;height:100vh;overflow:hidden;
+      display:flex;flex-direction:column;}
+
+    /* ── Header ── */
+    .app-header{
+      background:rgba(28,28,30,0.85);
+      backdrop-filter:blur(20px);
+      -webkit-backdrop-filter:blur(20px);
+      border-bottom:1px solid var(--border);
+      padding:0 24px;height:56px;
+      display:flex;align-items:center;gap:14px;flex-shrink:0;
+    }
+    .app-logo{width:32px;height:32px;background:linear-gradient(135deg,var(--accent),var(--accent-dim));
+      border-radius:var(--r-md);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;letter-spacing:0.5px;flex-shrink:0;}
+    .app-header h1{font-size:15px;font-weight:700;color:var(--text-hi);white-space:nowrap;letter-spacing:-0.2px;}
+    .app-tagline{font-size:11px;color:var(--text-mute);white-space:nowrap;}
+    .hdr-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+    .btn-rfq{
+      background:var(--accent);color:#fff;border:none;border-radius:var(--r-pill);
+      padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;
+      display:flex;align-items:center;gap:6px;white-space:nowrap;
+      transition:background .15s,transform .1s;letter-spacing:-0.1px;
+    }
+    .btn-rfq:hover{background:var(--accent-lit);}
+    .btn-rfq:active{transform:scale(.97);}
+    .btn-rfq.copied{background:var(--accent-green);color:#000;}
+    /* Mode toggle — Apple segmented control */
+    .mode-toggle{background:var(--bg-card2);border-radius:20px;padding:3px;display:flex;gap:2px;flex-shrink:0;}
+    .mode-btn{padding:6px 18px;border-radius:17px;border:none;font-size:13px;font-weight:600;
+      cursor:pointer;background:transparent;color:var(--text-mute);transition:all 0.2s;letter-spacing:-0.1px;}
+    .mode-btn.active{background:#ffffff;color:#000000;box-shadow:0 1px 4px rgba(0,0,0,0.3);}
+
+    /* ── Split ── */
+    .split{display:flex;flex:1;overflow:hidden;}
+
+    /* ── Left Panel ── */
+    .left{width:460px;min-width:460px;background:var(--bg-panel);border-right:1px solid var(--border);
+      overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;
+      scrollbar-width:thin;scrollbar-color:var(--border-hi) transparent;}
+    .left::-webkit-scrollbar{width:4px;}
+    .left::-webkit-scrollbar-thumb{background:var(--bg-card2);border-radius:2px;}
+
+    /* Cards */
+    .card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-xl);padding:16px 18px;box-shadow:var(--shadow-sm);}
+    .card-header{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+    .step-num{width:22px;height:22px;background:var(--accent);color:#fff;border-radius:50%;
+      font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+    .step-icon{width:22px;height:22px;background:var(--bg-input);border:1px solid var(--border-hi);
+      border-radius:50%;font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+    .card-title{font-size:11px;font-weight:700;color:var(--text-hi);text-transform:uppercase;letter-spacing:.08em;}
+    .card-badge{margin-left:auto;font-size:10px;color:var(--text-mute);background:var(--bg-input);
+      border:1px solid var(--border-hi);border-radius:var(--r-sm);padding:2px 7px;}
+    .card-label{font-size:11px;font-weight:700;color:var(--text-mute);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;}
+
+    /* Inputs */
+    select.inp,input.inp{width:100%;background:var(--bg-input);border:1px solid var(--border-hi);
+      border-radius:var(--r-md);color:var(--text-mid);padding:8px 12px;font-size:13px;font-family:inherit;
+      transition:border-color .2s;}
+    select.inp{padding-right:30px;cursor:pointer;-webkit-appearance:none;appearance:none;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23636366' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+      background-repeat:no-repeat;background-position:right 12px center;}
+    select.inp:focus,input.inp:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-tint);}
+    .sinp{background:var(--bg-input);border:1px solid var(--border-hi);border-radius:var(--r-md);
+      color:var(--fg);padding:6px 10px;font-size:12px;font-family:inherit;width:100%;transition:border-color .2s;}
+    .sinp:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-tint);}
+    select.sinp{-webkit-appearance:none;appearance:none;cursor:pointer;}
+    .reveal{display:none;margin-top:8px;}
+    .reveal.on{display:block;}
+    .reveal label,.field-lbl{font-size:11px;color:var(--text-mute);text-transform:uppercase;
+      letter-spacing:.05em;display:block;margin-bottom:4px;}
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;}
+
+    /* Toggle */
+    .tog-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;cursor:pointer;user-select:none;}
+    .tog-track{width:36px;height:20px;background:var(--bg-input);border-radius:10px;position:relative;transition:background .2s;flex-shrink:0;}
+    .tog-track.on{background:var(--accent);}
+    .tog-thumb{position:absolute;width:16px;height:16px;background:#fff;border-radius:50%;top:2px;left:2px;transition:transform .2s;box-shadow:0 1px 4px rgba(0,0,0,.4);}
+    .tog-track.on .tog-thumb{transform:translateX(16px);}
+    .tog-label{font-size:13px;color:var(--text-mid);}
+
+    /* Tooltip */
+    .tip{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;
+      background:var(--bg-input);border-radius:50%;font-size:9px;color:var(--text-dim);cursor:help;position:relative;}
+    .tip:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);
+      background:var(--bg-card2);color:var(--text-mid);border:1px solid var(--border-hi);border-radius:var(--r-md);
+      padding:8px 10px;font-size:10px;line-height:1.5;white-space:pre-wrap;width:220px;z-index:9999;
+      pointer-events:none;box-shadow:var(--shadow-md);}
+
+    /* Inventory */
+    .inv-row{display:flex;align-items:center;gap:10px;margin-top:10px;
+      background:var(--bg-input);border:1px solid var(--border-hi);border-radius:var(--r-md);padding:8px 12px;}
+    .inv-row label{font-size:12px;color:var(--text-dim);flex:1;}
+    .inv-row input.inp{width:80px;padding:5px 8px;text-align:center;}
+
+    /* ── Right Panel ── */
+    .right{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;
+      background:var(--bg-base);min-width:0;scrollbar-width:thin;scrollbar-color:var(--bg-card2) transparent;}
+    .right::-webkit-scrollbar{width:4px;}
+    .right::-webkit-scrollbar-thumb{background:var(--bg-card2);border-radius:2px;}
+
+    /* Hero */
+    .hero{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-xl);padding:22px;box-shadow:var(--shadow-sm);}
+    .hero-label{font-size:11px;color:var(--text-mute);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px;}
+    .hero-vram{font-size:52px;font-weight:800;color:var(--accent-lit);line-height:1;letter-spacing:-2px;}
+    .hero-vram .unit{font-size:20px;color:var(--text-dim);margin-left:6px;letter-spacing:0;font-weight:400;}
+    .hero-sub{font-size:12px;color:var(--text-dim);margin-top:6px;line-height:1.5;}
+    .bar-wrap{margin-top:16px;}
+    .bar-meta{display:flex;justify-content:space-between;font-size:11px;color:var(--text-mute);margin-bottom:6px;}
+    .bar-meta .hi{color:var(--accent-lit);font-weight:600;}
+    .bar-track{background:var(--bg-input);border:1px solid var(--border-hi);border-radius:var(--r-sm);height:8px;overflow:hidden;}
+    .bar-fill{height:100%;border-radius:var(--r-sm);width:0%;background:linear-gradient(90deg,var(--accent-dim),var(--accent-lit));transition:width .4s cubic-bezier(0.4,0,0.2,1),background .3s ease;}
+    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px;}
+    .stat{background:var(--bg-input);border:1px solid var(--border-hi);border-radius:var(--r-md);padding:12px;text-align:center;}
+    .stat-v{font-size:22px;font-weight:700;color:var(--text-hi);line-height:1;}
+    .stat-l{font-size:10px;color:var(--text-mute);margin-top:4px;line-height:1.3;}
+    .stat-l span{color:var(--accent-lit);}
+
+    /* Section cards */
+    .rcard{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-xl);padding:16px 18px;box-shadow:var(--shadow-sm);}
+    .rcard-title{font-size:11px;color:var(--text-mute);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;}
+
+    /* Grid boxes */
+    .box3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+    .box4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+    .ibox{background:var(--bg-input);border:1px solid var(--border-hi);border-radius:var(--r-md);padding:12px;text-align:center;}
+    .ibox-v{font-size:18px;font-weight:700;color:var(--text-hi);line-height:1;}
+    .ibox-v.green{color:var(--accent-green);}
+    .ibox-v.amber{color:var(--warn-amber);}
+    .ibox-v.red  {color:var(--warn-red);}
+    .ibox-l{font-size:10px;color:var(--text-mute);margin-top:4px;line-height:1.3;}
+
+    /* Procurement status banner */
+    .proc-banner{border-radius:var(--r-md);padding:10px 14px;font-size:12px;line-height:1.5;margin-top:12px;}
+    .proc-banner.good{background:rgba(48,209,88,0.10);border:1px solid rgba(48,209,88,0.30);color:var(--accent-green);}
+    .proc-banner.warn{background:rgba(255,159,10,0.12);border:1px solid rgba(255,159,10,0.35);color:var(--warn-amber);}
+    .proc-banner.none{background:var(--bg-input);border:1px solid var(--border-hi);color:var(--text-mute);}
+
+    /* Cost estimate rows */
+    .cost-row{display:flex;justify-content:space-between;align-items:center;
+      padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;gap:8px;margin-top:8px;}
+    .cost-row:last-child{border-bottom:none;padding-top:8px;}
+    .cost-l{color:var(--text-dim);flex:1;}
+    .cost-v{color:var(--text-mid);font-family:'SF Mono','Fira Mono','Courier New',monospace;white-space:nowrap;}
+    .cost-row.total-cost .cost-l{color:var(--warn-amber);font-weight:700;}
+    .cost-row.total-cost .cost-v{color:var(--warn-amber);font-weight:700;font-size:14px;}
+    .cost-note{font-size:10px;color:var(--text-mute);margin-top:8px;line-height:1.5;font-style:italic;}
+
+    /* Table rows */
+    .trow{display:flex;justify-content:space-between;align-items:center;
+      padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;gap:8px;}
+    .trow:last-child{border-bottom:none;padding-top:7px;}
+    .trow .tl{color:var(--text-dim);flex:1;}
+    .trow .tv{color:var(--text-mid);font-family:'SF Mono','Fira Mono','Courier New',monospace;white-space:nowrap;}
+    .trow.total .tl{color:var(--accent-lit);font-weight:700;}
+    .trow.total .tv{color:var(--accent-lit);font-weight:700;font-size:14px;}
+
+    /* Warnings */
+    .warn{border-radius:var(--r-lg);padding:12px 16px;font-size:12px;line-height:1.6;display:none;}
+    .warn.on{display:block;}
+    .warn-t{font-weight:700;margin-bottom:4px;font-size:13px;}
+    .w-multi{background:rgba(255,159,10,0.12);border:1px solid rgba(255,159,10,0.35);color:var(--warn-amber);}
+    .w-nvlnk{background:rgba(100,210,255,0.08);border:1px solid rgba(100,210,255,0.30);color:var(--warn-blue);}
+    .w-power{background:rgba(191,90,242,0.10);border:1px solid rgba(191,90,242,0.30);color:var(--warn-purple);}
+    .w-scale{background:rgba(255,69,58,0.10);border:1px solid rgba(255,69,58,0.30);color:var(--warn-red);}
+
+    /* Stack rows */
+    .stack-row{background:var(--bg-base);border:1px solid var(--border);border-radius:var(--r-lg);
+      padding:14px;margin-bottom:10px;transition:border-color .2s,box-shadow .2s;}
+    .stack-row:hover{border-color:rgba(10,132,255,0.4);box-shadow:0 0 0 3px rgba(10,132,255,0.07);}
+    .type-pill{display:inline-block;padding:3px 9px;border-radius:var(--r-pill);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;}
+    .btn-add-row{padding:7px 14px;border-radius:var(--r-pill);border:1px solid var(--border-hi);
+      background:var(--bg-card2);color:var(--text-mute);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;}
+    .btn-add-row:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-tint);}
+
+    /* Math block (Expert mode calculation transparency) */
+    .math-block{display:none;margin-top:10px;padding:12px 14px;background:var(--bg-panel);
+      border:1px solid var(--border-hi);border-radius:var(--r-md);font-family:'SF Mono','Fira Mono','Courier New',monospace;
+      font-size:10.5px;color:var(--text-dim);line-height:1.8;white-space:pre;overflow-x:auto;}
+    .math-block.open{display:block;animation:fadeIn .15s ease;}
+    .math-toggle{background:none;border:1px solid var(--border-hi);border-radius:var(--r-sm);
+      color:var(--text-mute);font-size:10px;padding:2px 8px;cursor:pointer;transition:all .2s;margin-top:6px;}
+    .math-toggle:hover{border-color:var(--accent);color:var(--accent);}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+
+    /* Guided mode panels */
+    #guided-panel{display:none;flex-direction:column;gap:12px;}
+    #guided-panel.active{display:flex;}
+    #expert-panel{display:flex;flex-direction:column;gap:12px;}
+    #expert-panel.hidden{display:none;}
+
+    /* Use-case tiles */
+    .uc-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+    .uc-tile{border:1.5px solid var(--border);border-radius:var(--r-lg);padding:14px 12px;
+      cursor:pointer;transition:all .2s;background:var(--bg-base);}
+    .uc-tile:hover{border-color:rgba(10,132,255,0.45);box-shadow:0 0 0 3px rgba(10,132,255,0.08);}
+    .uc-tile.sel{border-color:var(--accent);background:var(--accent-tint);}
+    .uc-tile-icon{font-size:26px;margin-bottom:6px;display:block;}
+    .uc-tile-name{font-size:13px;font-weight:600;color:var(--text-hi);}
+    .uc-tile-desc{font-size:11px;color:var(--text-mute);margin-top:3px;}
+
+    /* Guided Q-pill buttons */
+    .qpills{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}
+    .qpill{padding:8px 16px;border-radius:var(--r-pill);border:1.5px solid var(--border-hi);
+      background:var(--bg-card2);color:var(--text-mid);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;}
+    .qpill:hover{border-color:rgba(10,132,255,0.45);}
+    .qpill.sel{background:var(--accent);border-color:var(--accent);color:#fff;}
+    .guided-q{margin-top:10px;}
+    .guided-q-label{font-size:11px;color:var(--text-mute);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;}
+
+    /* Guided results */
+    #guided-results{display:none;flex-direction:column;gap:12px;}
+    #guided-results.active{display:flex;}
+    #expert-results{display:flex;flex-direction:column;gap:12px;}
+    #expert-results.hidden{display:none;}
+
+    /* Traffic light */
+    .tl-card{text-align:center;padding:24px;}
+    .tl-dot{font-size:52px;line-height:1;display:block;margin-bottom:10px;}
+    .tl-verdict{font-size:20px;font-weight:700;color:var(--text-hi);letter-spacing:-0.3px;}
+    .tl-sub{font-size:13px;color:var(--text-dim);margin-top:4px;}
+
+    /* Executive summary rows */
+    .exec-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);}
+    .exec-row:last-child{border-bottom:none;}
+    .exec-icon{font-size:20px;flex-shrink:0;width:30px;text-align:center;}
+    .exec-lbl{font-size:12px;color:var(--text-dim);flex:1;}
+    .exec-val{font-size:15px;font-weight:700;color:var(--text-hi);text-align:right;}
+
+    /* What powers this card */
+    .power-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);}
+    .power-item:last-child{border-bottom:none;}
+    .power-icon{font-size:18px;flex-shrink:0;width:26px;text-align:center;}
+    .power-text{font-size:13px;color:var(--text-mid);}
+
+    /* Guided RFQ button */
+    .btn-guided-rfq{width:100%;padding:12px;border-radius:var(--r-pill);border:none;
+      background:var(--accent);color:#fff;font-size:14px;font-weight:600;cursor:pointer;
+      transition:background .2s,transform .1s;letter-spacing:-0.1px;}
+    .btn-guided-rfq:hover{background:var(--accent-lit);}
+    .btn-guided-rfq:active{transform:scale(.98);}
+    .btn-guided-rfq.copied{background:var(--accent-green);color:#000;}
+
+    /* Guided hardware select */
+    .guided-hw-select{width:100%;background:var(--bg-input);border:1.5px solid var(--border-hi);
+      border-radius:var(--r-md);color:var(--text-mid);padding:10px 14px;font-size:13px;font-family:inherit;
+      -webkit-appearance:none;appearance:none;cursor:pointer;transition:border-color .2s;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23636366' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+      background-repeat:no-repeat;background-position:right 14px center;}
+    .guided-hw-select:focus{outline:none;border-color:var(--accent);}
+
+    /* Toggle switch */
+    .tog-row{display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;}
+    .tog-track{width:36px;height:20px;border-radius:10px;background:var(--bg-input);position:relative;
+      transition:background .2s;border:1px solid var(--border-hi);flex-shrink:0;}
+    .tog-track.on{background:var(--accent);}
+    .tog-thumb{width:16px;height:16px;border-radius:8px;background:#fff;position:absolute;top:1px;left:1px;
+      transition:transform .2s;}
+    .tog-track.on .tog-thumb{transform:translateX(16px);}
+    .tog-label{font-size:12px;color:var(--text-mid);}
+
+    /* Confidence interval card */
+    .ci-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px;}
+    .ci-col{background:var(--bg-input);border:1px solid var(--border-hi);border-radius:var(--r-md);padding:12px;text-align:center;}
+    .ci-col.baseline{border-color:var(--accent);background:var(--accent-tint);}
+    .ci-n{font-size:26px;font-weight:800;color:var(--text-hi);line-height:1.1;letter-spacing:-1px;}
+    .ci-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;}
+    .ci-label.opt{color:var(--accent-green);}
+    .ci-label.base{color:var(--accent);}
+    .ci-label.cons{color:var(--warn-amber);}
+    .ci-desc{font-size:9px;color:var(--text-mute);margin-top:4px;line-height:1.4;}
+    .ci-cost{font-size:10px;color:var(--text-dim);margin-top:5px;}
+
+    /* Architecture chip */
+    .arch-chip{font-size:9px;color:var(--text-mute);margin-top:2px;font-family:'SF Mono','Fira Mono','Courier New',monospace;}
+
+    /* Interpretation card */
+    .interp-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-xl);padding:18px;box-shadow:var(--shadow-sm);}
+    .interp-title{font-size:10px;font-weight:700;color:var(--text-mute);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;}
+    .interp-para{font-size:12px;color:var(--text-mid);line-height:1.7;margin-bottom:8px;}
+    .interp-para:last-child{margin-bottom:0;}
+    .interp-hi{color:var(--text-hi);font-weight:600;}
+    .interp-num{color:var(--accent);font-weight:700;font-family:'SF Mono','Fira Mono','Courier New',monospace;}
+
+    /* Print buttons */
+    .btn-print{padding:7px 14px;border-radius:var(--r-pill);border:1px solid var(--border-hi);
+      background:var(--bg-card2);color:var(--text-mid);font-size:12px;font-weight:600;cursor:pointer;
+      display:inline-flex;align-items:center;gap:5px;transition:all .2s;}
+    .btn-print:hover{border-color:var(--accent);color:var(--accent);}
+
+    /* Print / PDF @media */
+    @media print {
+      body{background:#fff!important;color:#111!important;height:auto!important;overflow:visible!important;display:block!important;}
+      .app-header,.left,.split{display:none!important;}
+      .right{display:block!important;overflow:visible!important;padding:0!important;}
+      #print-rfq-doc{display:block!important;}
+      #expert-results,#guided-results{display:none!important;}
+      *{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    }
+
+    /* Print document */
+    #print-rfq-doc{display:none;font-family:'Helvetica Neue',Arial,sans-serif;color:#111;padding:40px;max-width:900px;margin:0 auto;}
+    .pdf-header{border-bottom:3px solid #111;padding-bottom:16px;margin-bottom:24px;}
+    .pdf-title{font-size:22px;font-weight:800;letter-spacing:-.5px;}
+    .pdf-subtitle{font-size:13px;color:#555;margin-top:4px;}
+    .pdf-meta{font-size:10px;color:#888;margin-top:6px;}
+    .pdf-section{margin-bottom:24px;}
+    .pdf-sec-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#333;border-bottom:1px solid #ddd;padding-bottom:6px;margin-bottom:12px;}
+    .pdf-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f0f0f0;font-size:12px;}
+    .pdf-row:last-child{border-bottom:none;}
+    .pdf-rl{color:#555;flex:1;}
+    .pdf-rv{font-weight:600;color:#111;text-align:right;}
+    .pdf-hl{background:#f0f9f4;border:1px solid #34d158;border-radius:8px;padding:12px 14px;margin:10px 0;}
+    .pdf-hl-title{font-size:11px;font-weight:700;color:#1a7a3a;margin-bottom:5px;}
+    .pdf-hl-text{font-size:12px;color:#333;line-height:1.6;}
+    .pdf-ci-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:10px 0;}
+    .pdf-ci-col{border:1px solid #ddd;border-radius:7px;padding:10px;text-align:center;}
+    .pdf-ci-col.pdf-base{border-color:#30d158;background:#f0f9f4;}
+    .pdf-ci-n{font-size:24px;font-weight:800;color:#111;}
+    .pdf-ci-label{font-size:9px;font-weight:700;text-transform:uppercase;color:#555;margin-bottom:3px;}
+    .pdf-ci-desc{font-size:9px;color:#888;margin-top:3px;}
+    .pdf-rfp-item{display:flex;gap:10px;padding:7px 0;border-bottom:1px solid #f0f0f0;font-size:12px;}
+    .pdf-rfp-item:last-child{border-bottom:none;}
+    .pdf-rfp-num{font-weight:700;color:#30d158;min-width:24px;}
+    .pdf-rfp-text{color:#333;line-height:1.5;}
+    .pdf-footer{margin-top:32px;padding-top:10px;border-top:1px solid #ddd;font-size:9px;color:#aaa;display:flex;justify-content:space-between;}
+    #glossary-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:1000;opacity:0;pointer-events:none;transition:opacity .25s;}
+    #glossary-overlay.open{opacity:1;pointer-events:all;}
+    #glossary-panel{position:fixed;top:0;right:0;width:360px;height:100dvh;background:rgba(28,28,30,0.92);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);border-left:1px solid var(--border-hi);z-index:1001;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;overflow:hidden;}
+    #glossary-panel.open{transform:translateX(0);}
+    .gloss-header{padding:20px 20px 12px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;}
+    .gloss-title{font-size:15px;font-weight:700;color:var(--text-hi);}
+    .gloss-close{background:none;border:none;color:var(--text-mute);font-size:22px;cursor:pointer;line-height:1;padding:0;transition:color .15s;}
+    .gloss-close:hover{color:var(--text-hi);}
+    .gloss-search{padding:10px 16px;border-bottom:1px solid var(--border);flex-shrink:0;}
+    .gloss-search input{width:100%;box-sizing:border-box;background:var(--bg-input);border:1px solid var(--border-hi);border-radius:var(--r-pill);padding:8px 14px;font-size:13px;color:var(--text-hi);outline:none;}
+    .gloss-search input:focus{border-color:var(--accent);}
+    .gloss-list{overflow-y:auto;flex:1;padding:8px 0;}
+    .gloss-item{padding:12px 20px;border-bottom:1px solid var(--border);}
+    .gloss-item.hidden{display:none;}
+    .gloss-term{font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;}
+    .gloss-def{font-size:12px;color:var(--text-mid);line-height:1.6;}
+    .gloss-footer{padding:12px 16px;border-top:1px solid var(--border);font-size:10px;color:var(--text-mute);text-align:center;flex-shrink:0;}
+    .btn-gloss{padding:6px 12px;border-radius:var(--r-pill);border:1px solid var(--border-hi);background:transparent;color:var(--text-dim);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:5px;}
+    .btn-gloss:hover{border-color:var(--accent);color:var(--accent);}
+  </style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="app-logo">GPU</div>
+  <h1>On-Premises GPU Requirements Calculator</h1>
+  <span class="app-tagline">Local AI Infrastructure · No Cloud</span>
+  <div class="hdr-right">
+    <div class="mode-toggle" role="group" aria-label="Mode">
+      <button class="mode-btn" id="btn-guided" onclick="setMode('guided')">Guided</button>
+      <button class="mode-btn active" id="btn-expert" onclick="setMode('expert')">Expert</button>
+    </div>
+    <button class="btn-rfq" id="btn-rfq" onclick="copyRFQ()" style="display:none">Copy Vendor RFQ</button>
+    <button class="btn-guided-rfq" id="btn-guided-rfq-hdr" onclick="copyGuidedRFQ()" style="display:none;padding:8px 16px;width:auto">Vendor Summary</button>
+    <button class="btn-gloss" id="btn-theme" onclick="toggleTheme()" title="Toggle light / dark theme">☀</button>
+    <button class="btn-gloss" onclick="openGlossary()">Glossary</button>
+    <button class="btn-print" id="btn-print-rfq" onclick="openPrintDoc('rfq')" style="display:none">Print RFQ</button>
+    <button class="btn-print" id="btn-print-rfp" onclick="openPrintDoc('rfp')" style="display:none">Print RFP</button>
+  </div>
+</header>
+
+<div class="split">
+
+<!-- ══════════ LEFT PANEL ══════════ -->
+<div class="left">
+
+<!-- ────────── GUIDED MODE PANEL ────────── -->
+<div id="guided-panel">
+
+  <!-- Step 1: Use-Case Tiles -->
+  <div class="card">
+    <div class="card-label">What will your AI do?</div>
+    <div class="uc-grid" id="uc-grid">
+      <div class="uc-tile" onclick="selectTile('support-bot')" id="tile-support-bot">
+        <div class="uc-tile-name">Customer Support Bot</div>
+        <div class="uc-tile-desc">Answer questions, handle requests</div>
+      </div>
+      <div class="uc-tile" onclick="selectTile('voice-assistant')" id="tile-voice-assistant">
+        <div class="uc-tile-name">Voice Assistant</div>
+        <div class="uc-tile-desc">Listen, think, speak back</div>
+      </div>
+      <div class="uc-tile" onclick="selectTile('doc-search')" id="tile-doc-search">
+        <div class="uc-tile-name">Document Search &amp; Q&amp;A</div>
+        <div class="uc-tile-desc">Search your files and knowledge base</div>
+      </div>
+      <div class="uc-tile" onclick="selectTile('image-gen')" id="tile-image-gen">
+        <div class="uc-tile-name">Image Generator</div>
+        <div class="uc-tile-desc">Create images from text prompts</div>
+      </div>
+      <div class="uc-tile" onclick="selectTile('code-assist')" id="tile-code-assist">
+        <div class="uc-tile-name">Code Assistant</div>
+        <div class="uc-tile-desc">Help developers write &amp; review code</div>
+      </div>
+      <div class="uc-tile" onclick="selectTile('analytics-ai')" id="tile-analytics-ai">
+        <div class="uc-tile-name">Data Analytics AI</div>
+        <div class="uc-tile-desc">Analyse reports, summarise data</div>
+      </div>
+      <div class="uc-tile" style="grid-column:1/-1" onclick="selectTile('full-agent')" id="tile-full-agent">
+        <div class="uc-tile-name">Full AI Agent</div>
+        <div class="uc-tile-desc">Voice in + AI reasoning + voice out + document search — all-in-one</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 2: Follow-up Questions -->
+  <div class="card" id="guided-questions" style="display:none">
+    <div class="guided-q">
+      <div class="guided-q-label">How many people will use this at the same time?</div>
+      <div class="qpills" id="q-team">
+        <button class="qpill" onclick="setTeamSize(1,this)">Just me (1)</button>
+        <button class="qpill" onclick="setTeamSize(5,this)">Small team (5)</button>
+        <button class="qpill sel" onclick="setTeamSize(25,this)">Department (25)</button>
+        <button class="qpill" onclick="setTeamSize(100,this)">Company-wide (100+)</button>
+      </div>
+    </div>
+    <div class="guided-q" style="margin-top:16px">
+      <div class="guided-q-label">Is this a pilot or going into production?</div>
+      <div class="qpills" id="q-deploy">
+        <button class="qpill" onclick="setDeployment('pilot',this)">Pilot / PoC</button>
+        <button class="qpill sel" onclick="setDeployment('production',this)">Production</button>
+      </div>
+    </div>
+    <div class="guided-q" style="margin-top:16px">
+      <div class="guided-q-label">Which GPU server will you use?</div>
+      <select class="guided-hw-select" id="guided-gpu-sel" onchange="onGuidedGPUChange(this.value)">
+        <option value="rtx4090">Budget Workstation — RTX 4090 (24 GB)</option>
+        <option value="l4">Data Centre Compact — L4 / A10G (24 GB)</option>
+        <option value="a100-40">Data Centre Entry — A100 (40 GB)</option>
+        <option value="a100-80" selected>Data Centre Standard — A100 / H100 (80 GB)</option>
+        <option value="h200">High-End Server — H200 (141 GB)</option>
+      </select>
+    </div>
+  </div>
+
+</div><!-- /#guided-panel -->
+
+<!-- ────────── EXPERT MODE PANEL ────────── -->
+<div id="expert-panel" class="hidden">
+
+  <!-- AI Project Advisor -->
+  <div class="card">
+    <div class="card-label">AI Project Advisor</div>
+    <textarea id="advisor-input" rows="3" style="width:100%;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;color:var(--fg);padding:8px;font-size:12px;resize:vertical;font-family:inherit;box-sizing:border-box" placeholder="Describe your project — e.g. 'A voice-enabled customer support bot that transcribes calls, answers questions using an LLM, and speaks responses back'"></textarea>
+    <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+      <button onclick="runOfflineAdvisor()" style="padding:7px 16px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-size:12px;font-weight:700;cursor:pointer">Analyze →</button>
+      <button onclick="toggleAISettings()" style="padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer">Enhance with AI</button>
+    </div>
+    <div id="ai-settings" style="display:none;margin-top:10px;padding:10px;background:var(--bg-base);border-radius:8px;border:1px solid var(--border)">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Optional: use your own API key for smarter analysis (key not saved after tab closes)</div>
+      <select id="ai-provider" class="sinp" style="margin-bottom:6px;width:100%">
+        <option value="anthropic">Anthropic (Claude Haiku)</option>
+        <option value="openai">OpenAI (GPT-4o-mini)</option>
+      </select>
+      <input id="ai-key" type="password" class="sinp" placeholder="Paste API key here" style="margin-bottom:6px;width:100%;box-sizing:border-box" />
+      <button id="btn-ai-analyze" onclick="runAIAdvisor()" style="padding:7px 16px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-size:12px;font-weight:700;cursor:pointer">Analyze with AI</button>
+    </div>
+    <div id="advisor-result" style="margin-top:8px;font-size:11px;color:var(--accent);min-height:16px"></div>
+  </div>
+
+  <!-- Quick-Start Stack -->
+  <div class="card">
+    <div class="card-label">Quick-Start Stack</div>
+    <select id="qs-select" class="sinp" onchange="applyQS(this.value)" style="width:100%">
+      <option value="">— Choose a project template —</option>
+      <option value="voice-assistant">Voice Assistant (STT + LLM + TTS)</option>
+      <option value="rag-chatbot">RAG Chatbot (Embed + LLM)</option>
+      <option value="full-agent">Full Agent (STT + LLM + TTS + Embed)</option>
+      <option value="image-service">Image Generation Service</option>
+      <option value="transcription">Transcription Service (STT only)</option>
+      <option value="llm-server">LLM API Server</option>
+      <option value="lora-finetune">LoRA Fine-tuning</option>
+      <option value="full-training">Full Model Training</option>
+    </select>
+  </div>
+
+  <!-- Step 1: AI Model Stack -->
+  <div class="card">
+    <div class="card-label">Step 1 — AI Model Stack</div>
+    <div id="stack-list"></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
+      <button onclick="addRow('llm')" class="btn-add-row">+ LLM</button>
+      <button onclick="addRow('stt')" class="btn-add-row">+ STT</button>
+      <button onclick="addRow('tts')" class="btn-add-row">+ TTS</button>
+      <button onclick="addRow('img')" class="btn-add-row">+ Image</button>
+      <button onclick="addRow('emb')" class="btn-add-row">+ Embedding</button>
+      <button onclick="addRow('cv')" class="btn-add-row">+ Vision</button>
+      <button onclick="addRow('rnk')" class="btn-add-row">+ Reranker</button>
+      <button onclick="addRow('vlm')" class="btn-add-row">+ VLM</button>
+      <button onclick="addRow('vid')" class="btn-add-row">+ Video</button>
+    </div>
+  </div>
+
+  <!-- Step 2: GPU + Inventory -->
+  <div class="card">
+    <div class="card-header"><div class="step-num">2</div><span class="card-title">Step 2 — Server Hardware</span><span class="card-badge">On-Premises GPU</span></div>
+    <select class="inp" id="gpu-sel">
+      <option value="rtx4090">NVIDIA RTX 4090 (24 GB) — Consumer flagship · dev workstations</option>
+      <option value="l4">NVIDIA L4 / A10G (24 GB) — Compact, energy-efficient enterprise PCIe card</option>
+      <option value="a100-40">NVIDIA A100 (40 GB) — Heavy-duty data center classic</option>
+      <option value="a100-80" selected>NVIDIA A100 / H100 SXM (80 GB) — High-end enterprise data center standard</option>
+      <option value="h200">NVIDIA H200 SXM (141 GB) — Latest-gen HBM3e, highest single-GPU capacity</option>
+      <option value="custom">⚙ Custom Local Hardware — enter your GPU VRAM</option>
+    </select>
+    <div class="reveal" id="custom-vram-wrap">
+      <label for="custom-vram">Custom GPU VRAM (GB)</label>
+      <input class="inp" type="number" id="custom-vram" value="48" min="1" step="1">
+    </div>
+    <div class="inv-row">
+      <label for="gpu-inventory">GPUs I already own (same model, in inventory)</label>
+      <input class="inp" type="number" id="gpu-inventory" value="0" min="0" step="1" placeholder="0">
+    </div>
+  </div>
+
+  <!-- Step 3: Data & Logging -->
+  <div class="card">
+    <div class="card-header"><div class="step-num">3</div><span class="card-title">Step 3 — Data &amp; Logging Profile</span><span class="card-badge">Storage Sizing</span></div>
+    <div class="two-col">
+      <div>
+        <label class="field-lbl" for="qpd-input">Queries / Requests per Day
+          <span class="tip" data-tip="Total AI requests your system handles daily. Used to size log storage over your retention period.&#10;&#10;50 = small team tool&#10;500 = department rollout&#10;5,000 = company-wide platform">i</span>
+        </label>
+        <input class="inp" type="number" id="qpd-input" value="500" min="0" step="50">
+      </div>
+      <div>
+        <label class="field-lbl" for="retention-input">Log Retention Period</label>
+        <select class="inp" id="retention-input">
+          <option value="30">30 days (1 month)</option>
+          <option value="90" selected>90 days (3 months)</option>
+          <option value="180">180 days (6 months)</option>
+          <option value="365">1 year</option>
+          <option value="730">2 years</option>
+          <option value="1825">5 years (compliance)</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-top:8px;">
+      <label class="field-lbl" for="docs-input">Documents in Knowledge Base
+        <span class="tip" data-tip="For RAG / Q&A systems — PDFs, wikis, reports, etc. indexed in your vector database.&#10;&#10;0 = no RAG&#10;1,000 = small knowledge base&#10;50,000 = large enterprise corpus&#10;&#10;Each document ≈ 30 KB in the vector DB.">i</span>
+      </label>
+      <input class="inp" type="number" id="docs-input" value="0" min="0" step="100" placeholder="0 = no RAG / vector DB">
+    </div>
+  </div>
+
+  <!-- Advanced Options -->
+  <div class="card">
+    <div class="card-header"><div class="step-num">⚙</div><span class="card-title">Advanced Calculation Options</span></div>
+    <div class="two-col" style="margin-bottom:10px">
+      <div>
+        <div class="field-lbl">Serving Framework</div>
+        <select class="inp" id="serving-fw" onchange="_servingFW=this.value;recalc()">
+          <option value="vllm">vLLM (+3 GB/GPU)</option>
+          <option value="tgi">HuggingFace TGI (+2 GB)</option>
+          <option value="ollama">Ollama (+1.5 GB)</option>
+          <option value="none">None / Custom</option>
+        </select>
+      </div>
+      <div>
+        <div class="field-lbl">Runtime Spike Buffer</div>
+        <select class="inp" id="spike-buf" onchange="_spikeBuffer=parseFloat(this.value);recalc()">
+          <option value="0.10">+10% (stable load)</option>
+          <option value="0.15" selected>+15% (default)</option>
+          <option value="0.20">+20% (variable)</option>
+          <option value="0.30">+30% (bursty)</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <label class="tog-row" onclick="_flashAttn=!_flashAttn;document.getElementById('tog-flash').classList.toggle('on',_flashAttn);recalc()">
+        <div class="tog-track" id="tog-flash"><div class="tog-thumb"></div></div>
+        <span class="tog-label">Flash Attention <span style="color:var(--accent);font-size:10px">−40% KV Cache</span></span>
+      </label>
+      <label class="tog-row" onclick="_haMode=!_haMode;document.getElementById('tog-ha').classList.toggle('on',_haMode);recalc()">
+        <div class="tog-track" id="tog-ha"><div class="tog-thumb"></div></div>
+        <span class="tog-label">High Availability (N+1 spare GPU)</span>
+      </label>
+    </div>
+  </div>
+
+</div><!-- /#expert-panel -->
+</div><!-- /left -->
+
+<!-- ══════════ RIGHT PANEL ══════════ -->
+<div class="right">
+
+<!-- ────────── GUIDED RESULTS ────────── -->
+<div id="guided-results">
+
+  <!-- Traffic Light Card -->
+  <div class="rcard tl-card" id="guided-traffic">
+    <span class="tl-dot" id="tl-dot" style="color:var(--text-mute)">●</span>
+    <div class="tl-verdict" id="tl-verdict">Select a use case to get started</div>
+    <div class="tl-sub" id="tl-sub"></div>
+  </div>
+
+  <!-- Executive Summary Card -->
+  <div class="rcard" id="guided-summary" style="display:none">
+    <div class="rcard-title">Your AI Infrastructure</div>
+    <div class="exec-row">
+      <span class="exec-icon">·</span>
+      <span class="exec-lbl">GPUs required</span>
+      <span class="exec-val" id="gs-gpus">—</span>
+    </div>
+    <div class="exec-row">
+      <span class="exec-icon">·</span>
+      <span class="exec-lbl">Estimated hardware cost</span>
+      <span class="exec-val" id="gs-cost">—</span>
+    </div>
+    <div class="exec-row">
+      <span class="exec-icon">·</span>
+      <span class="exec-lbl">Simultaneous users</span>
+      <span class="exec-val" id="gs-users">—</span>
+    </div>
+    <div class="exec-row">
+      <span class="exec-icon">·</span>
+      <span class="exec-lbl">Typical procurement time</span>
+      <span class="exec-val" id="gs-timeline">6 – 10 weeks</span>
+    </div>
+  </div>
+
+  <!-- What Powers This Card -->
+  <div class="rcard" id="guided-powers" style="display:none">
+    <div class="rcard-title">What Powers This</div>
+    <div id="guided-powers-list"></div>
+  </div>
+
+  <!-- Vendor Summary Button -->
+  <div id="guided-rfq-wrap" style="display:none">
+    <button class="btn-guided-rfq" id="btn-guided-rfq" onclick="copyGuidedRFQ()">
+      Copy Vendor Summary
+    </button>
+  </div>
+
+</div><!-- /#guided-results -->
+
+<!-- ────────── EXPERT RESULTS ────────── -->
+<div id="expert-results">
+
+  <!-- Hero: VRAM -->
+  <div class="hero">
+    <div class="hero-label">Total GPU VRAM Required</div>
+    <div class="hero-vram" id="total-gb">—<span class="unit">GB</span></div>
+    <div class="hero-sub">Configure your AI stack on the left to see requirements.</div>
+    <div class="bar-wrap">
+      <div class="bar-meta"><span>0 GB</span><span class="hi" id="bar-req">Required: —</span><span id="bar-avail">Available: —</span></div>
+      <div class="bar-track"><div class="bar-fill" id="cap-bar-fill"></div></div>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="stat-v" id="gpu-count-hero">—</div><div class="stat-l">GPUs Required<br><span>Total</span></div></div>
+      <div class="stat"><div class="stat-v" id="avail-vram-hero">—</div><div class="stat-l">Available<br><span>VRAM</span></div></div>
+      <div class="stat"><div class="stat-v" id="util-pct-hero">—</div><div class="stat-l">Utilisation<br><span>% Used</span></div></div>
+    </div>
+  </div>
+
+  <!-- Confidence Interval -->
+  <div class="rcard" id="card-ci" style="display:none">
+    <div class="rcard-title">GPU Count — Confidence Interval</div>
+    <div class="ci-grid">
+      <div class="ci-col">
+        <div class="ci-label opt">Optimistic (P25)</div>
+        <div class="ci-n" id="ci-opt-n">—</div>
+        <div class="ci-desc">Flash Attn · light load · no HA</div>
+        <div class="ci-cost" id="ci-opt-cost"></div>
+      </div>
+      <div class="ci-col baseline">
+        <div class="ci-label base">Baseline (P50)</div>
+        <div class="ci-n" id="ci-base-n">—</div>
+        <div class="ci-desc">Current settings · standard overhead</div>
+        <div class="ci-cost" id="ci-base-cost"></div>
+      </div>
+      <div class="ci-col">
+        <div class="ci-label cons">Conservative (P90)</div>
+        <div class="ci-n" id="ci-cons-n">—</div>
+        <div class="ci-desc">Peak load · full overhead · N+1 HA</div>
+        <div class="ci-cost" id="ci-cons-cost"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Per-Model VRAM Breakdown -->
+  <div class="rcard" id="rcard-stack">
+    <div class="rcard-title">AI Stack — Per Model VRAM</div>
+    <div id="stack-model-rows" style="display:flex;flex-direction:column;gap:8px;margin-top:8px"><div id="stack-empty-msg" style="text-align:center;padding:24px;color:var(--text-mute);font-size:13px">← Add a model from the left panel to calculate GPU requirements</div></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border);margin-top:10px;padding-top:10px">
+      <span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Total Stack VRAM</span>
+      <span id="stack-total-display" style="font-size:20px;font-weight:900;color:var(--accent)">—</span>
+    </div>
+  </div>
+
+  <!-- Procurement & Cost -->
+  <div class="rcard">
+    <div class="rcard-title">GPU Procurement &amp; Cost Estimate</div>
+    <div class="box3">
+      <div class="ibox"><div class="ibox-v" id="gpus-needed">—</div><div class="ibox-l">GPUs Required</div></div>
+      <div class="ibox"><div class="ibox-v" id="gpus-owned">—</div><div class="ibox-l">GPUs You Own</div></div>
+      <div class="ibox"><div class="ibox-v" id="gpus-to-buy">—</div><div class="ibox-l">To Purchase</div></div>
+    </div>
+    <div class="proc-banner none" id="proc-status-msg">Enter your GPU inventory count to see your procurement gap.</div>
+    <div class="cost-row"><span class="cost-l">Est. unit price (market)</span><span class="cost-v" id="gpu-unit-price">—</span></div>
+    <div class="cost-row"><span class="cost-l">Est. total GPU hardware cost</span><span class="cost-v" id="gpu-cost-est">—</span></div>
+    <div class="cost-row"><span class="cost-l">Est. deployment timeline</span><span class="cost-v" id="deploy-timeline">—</span></div>
+    <div class="cost-row"><span class="cost-l">Form factor / rack info</span><span class="cost-v" id="rack-info">—</span></div>
+  <div class="cost-row" style="margin-top:10px"><span class="cost-l">Delivery region <span class="tip" data-tip="Lead times vary by region due to distribution chains,&#10;customs, and US BIS export controls for H100/H200.&#10;&#10;UAE: ~4–8 weeks longer than US domestic for H100/H200.&#10;BIS compliance may add 8–24 weeks without VEU status.">i</span></span><select class="sinp" id="region-sel" onchange="_region=this.value;recalc()" style="font-size:11px;padding:4px 8px"><option value="uae" selected>UAE / Abu Dhabi</option><option value="us">United States</option><option value="europe">Europe (UK/EU)</option><option value="india">India</option><option value="apac">Asia-Pacific</option><option value="other">Other / Unknown</option></select></div>
+    <div class="cost-note">Estimated market prices — request formal vendor quotation for final pricing. Prices vary by region, reseller, and support contract.</div>
+  </div>
+
+  <!-- System Requirements -->
+  <div class="rcard" id="card-server-req">
+    <div class="rcard-title">Server Infrastructure Requirements</div>
+    <div class="box3">
+      <div class="ibox"><div class="ibox-v" id="srv-power">—</div><div class="ibox-l">Power Draw<br><span>Watts</span></div></div>
+      <div class="ibox"><div class="ibox-v" id="srv-cpu-ram">—</div><div class="ibox-l">System RAM<br><span>GB minimum</span></div></div>
+      <div class="ibox"><div class="ibox-v" id="srv-cpu-cores">—</div><div class="ibox-l">CPU Cores<br><span>minimum</span></div></div>
+    </div>
+    <div style="margin-top:10px;display:flex;flex-direction:column;gap:2px">
+      <div class="cost-row"><span class="cost-l">Network interface</span><span class="cost-v" id="srv-network">—</span></div>
+      <div class="cost-row"><span class="cost-l">Rack space</span><span class="cost-v" id="srv-rack">—</span></div>
+      <div class="cost-row"><span class="cost-l">Cooling requirement</span><span class="cost-v" id="srv-cooling">—</span></div>
+      <div class="cost-row"><span class="cost-l">Est. heat output</span><span class="cost-v" id="srv-btu">—</span></div>
+      <div class="cost-row"><span class="cost-l">Power supply</span><span class="cost-v" id="srv-psu">—</span></div>
+      <div class="cost-row"><span class="cost-l">OS / CUDA stack</span><span class="cost-v" id="srv-os">—</span></div>
+    </div>
+  </div>
+
+  <!-- Storage Requirements -->
+  <div class="rcard">
+    <div class="rcard-title">On-Premises Storage Requirements</div>
+    <div class="trow"><span class="tl">Model files on disk</span><span class="tv" id="model-disk">—</span></div>
+    <div class="trow"><span class="tl">Inference logs</span><span class="tv" id="log-stor">—</span></div>
+    <div class="trow"><span class="tl">Vector DB / Embeddings</span><span class="tv" id="vdb-stor">—</span></div>
+    <div class="trow total"><span class="tl">Total On-Prem Storage Needed</span><span class="tv" id="total-stor">—</span></div>
+  </div>
+
+  <!-- VRAM Breakdown (first LLM) -->
+  <div class="rcard">
+    <div class="rcard-title">VRAM Calculation Breakdown (First LLM)</div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <tbody id="vram-breakdown-body">
+        <tr><td style="color:var(--text-dim);padding:5px 0;border-bottom:1px solid var(--border)" colspan="2">Add an LLM to the stack to see breakdown.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Warnings -->
+  <div class="warn w-multi" id="warn-multi"><div class="warn-t">⚠ Multi-GPU Clustering Required</div>Your workload requires multiple GPUs. Your systems team must configure a parallelism framework such as <strong>vLLM</strong>, <strong>DeepSpeed</strong>, or <strong>Hugging Face Accelerate</strong> using Tensor Parallelism to split the model across GPU interconnects.</div>
+  <div class="warn w-nvlnk" id="warn-nvlink"><div class="warn-t">⚠ NVLink Interconnect Required</div>With multiple GPUs required, PCIe bandwidth will bottleneck inference throughput. Specify servers with <strong>NVLink / NVSwitch fabric</strong> (e.g. DGX H100, HGX H200) in your vendor RFQ. PCIe-only multi-GPU rigs will deliver significantly lower tokens/sec.</div>
+  <div class="warn w-power" id="warn-power"><div class="warn-t">⚠ Power &amp; Cooling Warning</div>Estimated peak draw exceeds 2 kW. Your server room needs dedicated <strong>220V–240V circuits</strong>, a matching UPS, and adequate BTU air conditioning or liquid cooling. Include this in your facilities request before placing the hardware order.</div>
+  <div class="warn w-scale" id="warn-scale"><div class="warn-t">⚠ Hardware Scale Limit Exceeded</div>This workload exceeds a single standard 8-GPU on-prem node. Consider <strong>INT4 quantization</strong> to reduce requirements, or consult an OEM provider such as <strong>Supermicro</strong> or <strong>Dell Enterprise AI</strong> for a custom multi-node cluster.</div>
+<div class="warn" id="warn-bis" style="display:none"><b>⚠ UAE BIS Export Control</b><br>H100/H200 GPUs are US-controlled (BIS Tier 2). Without Validated End-User (VEU) status, allow <b>8–24 additional weeks</b> for export licensing. Engage Ingram Micro Gulf or Redington Gulf as authorized channels. Start compliance process 6 months ahead.</div>
+
+  <!-- Why This Many GPUs -->
+  <div class="interp-card" id="card-interp" style="display:none">
+    <div class="interp-title">Why This Many GPUs?</div>
+    <div id="interp-body"></div>
+  </div>
+
+</div><!-- /#expert-results -->
+</div><!-- /right -->
+</div><!-- /split -->
+
+<!-- Print / PDF Document (hidden until window.print()) -->
+<div id="print-rfq-doc">
+  <div class="pdf-header">
+    <div class="pdf-title" id="pdf-doc-title">GPU Infrastructure Request for Quotation</div>
+    <div class="pdf-subtitle" id="pdf-doc-subtitle"></div>
+    <div class="pdf-meta" id="pdf-doc-meta"></div>
+  </div>
+  <div id="pdf-doc-body"></div>
+  <div class="pdf-footer">
+    <span>Generated by On-Premises GPU Requirements Calculator</span>
+    <span id="pdf-doc-date"></span>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════
+   CONSTANTS
+═══════════════════════════════════════ */
+var PREC  = { fp32:4.0, fp16:2.0, bf16:2.0, int8:1.0, int4:0.5 };
+var WLOAD = { inference:0, lora:0.6, training:14.0 };
+var GVRAM = { rtx4090:24, l4:24, 'a100-40':40, 'a100-80':80, h200:141, custom:null };
+var GTDP  = { rtx4090:450, l4:72, 'a100-40':400, 'a100-80':400, h200:700, custom:null };
+var GPRICE = { rtx4090:1800, l4:4500, 'a100-40':12000, 'a100-80':25000, h200:40000, custom:null };
+var GRACK  = { rtx4090:'workstation', l4:'2U/4-card', 'a100-40':'10U/8-card', 'a100-80':'10U/8-card', h200:'10U/8-card', custom:'4U/4-card' };
+var GLABEL = { rtx4090:'RTX 4090 (24 GB)', l4:'L4 / A10G (24 GB)', 'a100-40':'A100 (40 GB)', 'a100-80':'A100 / H100 SXM (80 GB)', h200:'H200 SXM (141 GB)', custom:'Custom GPU' };
+
+const MODEL_LIBRARY = {
+  llm: [
+    { id:'llama32-1b',    name:'Llama 3.2 1B',              p:1,    l:16,  kv:8,   hd:64  },
+    { id:'llama32-3b',    name:'Llama 3.2 3B',              p:3,    l:28,  kv:8,   hd:128 },
+    { id:'llama31-8b',    name:'Llama 3.1 8B',              p:8,    l:32,  kv:8,   hd:128 },
+    { id:'llama31-70b',   name:'Llama 3.1 70B',             p:70,   l:80,  kv:8,   hd:128 },
+    { id:'llama31-405b',  name:'Llama 3.1 405B',            p:405,  l:126, kv:8,   hd:128 },
+    { id:'mistral-7b',    name:'Mistral 7B v0.3',           p:7,    l:32,  kv:8,   hd:128 },
+    { id:'mixtral-8x7b',  name:'Mixtral 8×7B (MoE)',        p:46.7, l:32,  kv:8,   hd:128, activeP:12.9 },
+    { id:'qwen25-7b',     name:'Qwen2.5 7B',                p:7,    l:28,  kv:4,   hd:128 },
+    { id:'qwen25-14b',    name:'Qwen2.5 14B',               p:14,   l:48,  kv:8,   hd:128 },
+    { id:'qwen25-32b',    name:'Qwen2.5 32B',               p:32,   l:64,  kv:8,   hd:128 },
+    { id:'qwen25-72b',    name:'Qwen2.5 72B',               p:72,   l:80,  kv:8,   hd:128 },
+    { id:'gemma2-9b',     name:'Gemma 2 9B',                p:9,    l:42,  kv:8,   hd:256 },
+    { id:'gemma2-27b',    name:'Gemma 2 27B',               p:27,   l:46,  kv:16,  hd:256 },
+    { id:'deepseek-7b',   name:'DeepSeek-R1 7B',            p:7,    l:28,  kv:4,   hd:128 },
+    { id:'deepseek-70b',  name:'DeepSeek-R1 70B',           p:70,   l:80,  kv:8,   hd:128 },
+    { id:'deepseek-671b', name:'DeepSeek-R1 671B (MoE)',    p:671,  l:61,  kv:128, hd:128, activeP:37 },
+    { id:'phi3-mini',     name:'Phi-3 Mini 3.8B',           p:3.8,  l:32,  kv:32,  hd:96  },
+    { id:'phi4-14b',      name:'Phi-4 14B',                 p:14,   l:40,  kv:10,  hd:128 },
+    { id:'yi-34b',        name:'Yi 34B',                    p:34,   l:60,  kv:8,   hd:128 },
+    { id:'custom-llm',    name:'Custom LLM',                p:7,    l:32,  kv:8,   hd:128 },
+  ],
+  stt: [
+    { id:'whisper-tiny',    name:'Whisper Tiny',            baseVRAM:0.15, peakVRAM:0.3  },
+    { id:'whisper-base',    name:'Whisper Base',            baseVRAM:0.3,  peakVRAM:0.5  },
+    { id:'whisper-small',   name:'Whisper Small',           baseVRAM:0.5,  peakVRAM:1.0  },
+    { id:'whisper-medium',  name:'Whisper Medium',          baseVRAM:1.5,  peakVRAM:2.5  },
+    { id:'whisper-large',   name:'Whisper Large-v3',        baseVRAM:3.0,  peakVRAM:5.0  },
+    { id:'faster-whisper',  name:'faster-whisper Large-v3', baseVRAM:2.0,  peakVRAM:3.5  },
+  ],
+  tts: [
+    { id:'kokoro',    name:'Kokoro 82M',     baseVRAM:0.4, peakVRAM:0.8 },
+    { id:'melotts',   name:'MeloTTS',        baseVRAM:0.5, peakVRAM:1.0 },
+    { id:'styletts2', name:'StyleTTS2',      baseVRAM:1.5, peakVRAM:2.5 },
+    { id:'xtts2',     name:'Coqui XTTS v2', baseVRAM:3.0, peakVRAM:4.0 },
+    { id:'bark',      name:'Bark',           baseVRAM:4.0, peakVRAM:8.0 },
+  ],
+  img: [
+    { id:'sd15',         name:'Stable Diffusion 1.5', baseVRAM:4.0,  peakVRAM:6.0  },
+    { id:'sdxl',         name:'SDXL 1.0',             baseVRAM:8.0,  peakVRAM:12.0 },
+    { id:'sd35-medium',  name:'SD 3.5 Medium',        baseVRAM:5.0,  peakVRAM:8.0  },
+    { id:'sd35-large',   name:'SD 3.5 Large',         baseVRAM:12.0, peakVRAM:16.0 },
+    { id:'flux-schnell', name:'Flux.1 Schnell',        baseVRAM:12.0, peakVRAM:16.0 },
+    { id:'flux-dev',     name:'Flux.1 Dev',            baseVRAM:12.0, peakVRAM:24.0 },
+  ],
+  emb: [
+    { id:'bge-small', name:'BGE-small-en',       baseVRAM:0.1,  peakVRAM:0.15 },
+    { id:'bge-large', name:'BGE-large-en',       baseVRAM:0.3,  peakVRAM:0.5  },
+    { id:'e5-large',  name:'E5-large',           baseVRAM:0.3,  peakVRAM:0.5  },
+    { id:'nomic',     name:'nomic-embed-text',   baseVRAM:0.15, peakVRAM:0.3  },
+    { id:'jina-v3',   name:'Jina Embeddings v3', baseVRAM:0.6,  peakVRAM:1.0  },
+  ],
+  cv: [
+    { id:'yolov8n',    name:'YOLOv8 Nano',       baseVRAM:0.2,  peakVRAM:0.4  },
+    { id:'yolov8s',    name:'YOLOv8 Small',      baseVRAM:0.4,  peakVRAM:0.8  },
+    { id:'yolov8x',    name:'YOLOv8 XL',         baseVRAM:0.8,  peakVRAM:1.5  },
+    { id:'yolov11n',   name:'YOLOv11 Nano',      baseVRAM:0.2,  peakVRAM:0.5  },
+    { id:'yolov11x',   name:'YOLOv11 XL',        baseVRAM:0.9,  peakVRAM:2.0  },
+    { id:'rt-detr-l',  name:'RT-DETR Large',     baseVRAM:1.0,  peakVRAM:2.5  },
+    { id:'sam-base',   name:'SAM Base',          baseVRAM:0.4,  peakVRAM:1.0  },
+    { id:'sam-large',  name:'SAM Large',         baseVRAM:2.4,  peakVRAM:5.0  },
+    { id:'sam2-large', name:'SAM 2 Large',       baseVRAM:3.5,  peakVRAM:6.0  },
+  ],
+  rnk: [
+    { id:'bge-reranker-v2-m3', name:'BGE Reranker v2-m3',  baseVRAM:0.2,  peakVRAM:0.4  },
+    { id:'bge-reranker-large', name:'BGE Reranker Large',   baseVRAM:0.3,  peakVRAM:0.6  },
+    { id:'ms-marco-l6',        name:'ms-marco MiniLM L6',  baseVRAM:0.08, peakVRAM:0.15 },
+    { id:'ms-marco-l12',       name:'ms-marco MiniLM L12', baseVRAM:0.1,  peakVRAM:0.2  },
+    { id:'jina-reranker-v2',   name:'Jina Reranker v2',    baseVRAM:0.3,  peakVRAM:0.5  },
+  ],
+  vlm: [
+    { id:'llava-7b',      name:'LLaVA 1.6 7B',           p:7,  l:32, kv:8,  hd:128, visionOH:1.5 },
+    { id:'llava-13b',     name:'LLaVA 1.6 13B',          p:13, l:40, kv:8,  hd:128, visionOH:1.5 },
+    { id:'qwen2vl-7b',    name:'Qwen2-VL 7B',            p:7,  l:28, kv:4,  hd:128, visionOH:2.0 },
+    { id:'qwen2vl-72b',   name:'Qwen2-VL 72B',           p:72, l:80, kv:8,  hd:128, visionOH:2.0 },
+    { id:'internvl2-8b',  name:'InternVL2 8B',           p:8,  l:32, kv:8,  hd:128, visionOH:1.0 },
+    { id:'internvl2-26b', name:'InternVL2 26B',          p:26, l:48, kv:8,  hd:128, visionOH:1.0 },
+    { id:'llama32v-11b',  name:'Llama 3.2 Vision 11B',   p:11, l:32, kv:8,  hd:128, visionOH:2.0 },
+    { id:'llama32v-90b',  name:'Llama 3.2 Vision 90B',   p:90, l:80, kv:8,  hd:128, visionOH:2.0 },
+    { id:'phi4-vision',   name:'Phi-4 Vision 14B',        p:14, l:40, kv:10, hd:128, visionOH:1.5 },
+  ],
+  vid: [
+    { id:'wan21-1b',      name:'Wan2.1 1.3B',            baseVRAM:8.0,  peakVRAM:12.0 },
+    { id:'wan21-14b',     name:'Wan2.1 14B',             baseVRAM:16.0, peakVRAM:24.0 },
+    { id:'cogvideox-2b',  name:'CogVideoX 2B',           baseVRAM:12.0, peakVRAM:16.0 },
+    { id:'cogvideox-5b',  name:'CogVideoX 5B',           baseVRAM:16.0, peakVRAM:22.0 },
+    { id:'hunyuan-video', name:'HunyuanVideo 13B',       baseVRAM:20.0, peakVRAM:32.0 },
+    { id:'animatediff',   name:'AnimateDiff (SDXL base)', baseVRAM:10.0, peakVRAM:16.0 },
+  ],
+};
+
+/* ═══════════════════════════════════════
+   QUICK-START PRESETS
+═══════════════════════════════════════ */
+const QS = {
+  'voice-assistant': [
+    { type:'stt', modelId:'whisper-large', streams:5 },
+    { type:'llm', modelId:'llama31-8b', prec:'int8', workload:'inference', ctx:4096, users:5 },
+    { type:'tts', modelId:'kokoro', streams:5 },
+  ],
+  'rag-chatbot': [
+    { type:'emb', modelId:'bge-large', batchSize:1 },
+    { type:'llm', modelId:'llama31-8b', prec:'int8', workload:'inference', ctx:8192, users:20 },
+  ],
+  'full-agent': [
+    { type:'stt', modelId:'whisper-large', streams:10 },
+    { type:'llm', modelId:'llama31-70b', prec:'int4', workload:'inference', ctx:16384, users:10 },
+    { type:'tts', modelId:'xtts2', streams:10 },
+    { type:'emb', modelId:'bge-large', batchSize:1 },
+  ],
+  'image-service': [
+    { type:'img', modelId:'sdxl', jobs:2 },
+  ],
+  'transcription': [
+    { type:'stt', modelId:'whisper-large', streams:10 },
+  ],
+  'llm-server': [
+    { type:'llm', modelId:'llama31-8b', prec:'int8', workload:'inference', ctx:4096, users:20 },
+  ],
+  'lora-finetune': [
+    { type:'llm', modelId:'llama31-8b', prec:'fp16', workload:'lora', ctx:4096, users:1 },
+  ],
+  'full-training': [
+    { type:'llm', modelId:'llama31-70b', prec:'fp32', workload:'training', ctx:4096, users:1 },
+  ],
+};
+
+function applyQS(key) {
+  if (!key) return;
+  var preset = QS[key]; if (!preset) return;
+  stack=[]; _rowId=0;
+  preset.forEach(function(cfg){ addRow(cfg.type, cfg); });
+}
+
+/* ═══════════════════════════════════════
+   STACK STATE & ROW MANAGEMENT
+═══════════════════════════════════════ */
+var stack = [];
+var _rowId = 0;
+var _lastR = null;
+var _flashAttn    = false;
+var _servingFW    = 'vllm';
+var _haMode       = false;
+var _region       = 'uae';
+var _spikeBuffer  = 0.15;
+var _cudaOverhead = 1.5;
+var SERVING_OVERHEAD = { vllm:3.0, tgi:2.0, ollama:1.5, none:0 };
+var REGIONAL_TIMELINE = {
+  consumer:{ uae:'1–3 weeks (in-stock UAE)', us:'1–2 weeks', europe:'1–2 weeks', india:'2–4 weeks', apac:'1–3 weeks', other:'2–4 weeks' },
+  mid:     { uae:'10–20 weeks (UAE import chain)', us:'6–14 weeks', europe:'8–16 weeks', india:'12–20 weeks', apac:'8–14 weeks', other:'10–18 weeks' },
+  high:    { uae:'16–26 weeks (BIS export + UAE chain)', us:'8–16 weeks', europe:'10–20 weeks', india:'18–28 weeks', apac:'12–20 weeks', other:'16–26 weeks' },
+  top:     { uae:'26–40 weeks (VEU/BIS + allocation)', us:'16–28 weeks', europe:'20–32 weeks', india:'28–40 weeks', apac:'20–32 weeks', other:'26–40 weeks' },
+};
+var GPU_TIER = {
+  'rtx4090':'consumer','rtx3090':'consumer',
+  'a100-40':'mid','a100-80':'mid',
+  'h100-sxm':'high','h100-pcie':'high',
+  'h200':'top','gb200':'top',
+};
+
+var TYPE_META = {
+  llm: { label:'LLM',       color:'#60a5fa', bg:'#1e3a5f' },
+  stt: { label:'STT',       color:'#34d399', bg:'#1a3a2a' },
+  tts: { label:'TTS',       color:'#a78bfa', bg:'#2d1b4e' },
+  img: { label:'IMG',       color:'#fb923c', bg:'#3d1f1f' },
+  emb: { label:'Embedding', color:'#fbbf24', bg:'#2a2a1a' },
+  cv:  { label:'Vision',    color:'#e879f9', bg:'#3b1042' },
+  rnk: { label:'Reranker',  color:'#38bdf8', bg:'#0c2a3a' },
+  vlm: { label:'VLM',       color:'#f0abfc', bg:'#3b0f52' },
+  vid: { label:'Video',     color:'#fb923c', bg:'#3d1f0d' },
+};
+
+function addRow(type, defaults) {
+  defaults = defaults || {};
+  var firstModel = MODEL_LIBRARY[type][0];
+  var row = {
+    id:        ++_rowId,
+    type:      type,
+    modelId:   defaults.modelId   || firstModel.id,
+    prec:      defaults.prec      || 'fp16',
+    workload:  defaults.workload  || 'inference',
+    ctx:       defaults.ctx       || 4096,
+    users:     defaults.users     || 10,
+    streams:   defaults.streams   || 5,
+    jobs:      defaults.jobs      || 2,
+    batchSize: defaults.batchSize || 1,
+    customP:   defaults.customP   || 7,
+    customL:   defaults.customL   || 32,
+    customKV:  defaults.customKV  || 8,
+    customHD:  defaults.customHD  || 128,
+  };
+  stack.push(row);
+  renderStackRows();
+  recalc();
+}
+
+function removeRow(id) {
+  stack = stack.filter(function(r){ return r.id !== id; });
+  renderStackRows();
+  recalc();
+}
+
+function updateRow(id, field, value) {
+  var row = stack.find(function(r){ return r.id === id; });
+  if (!row) return;
+  row[field] = value;
+  if (field === 'modelId' || field.startsWith('custom')) renderStackRows();
+  recalc();
+}
+
+function renderStackRows() {
+  var list = document.getElementById('stack-list');
+  if (!list) return;
+  if (stack.length === 0) {
+    list.innerHTML = '<p style="color:var(--muted);font-size:12px;text-align:center;padding:16px 0">No models added yet. Use Quick-Start or the buttons below.</p>';
+    return;
+  }
+  list.innerHTML = stack.map(function(row) {
+    var meta   = TYPE_META[row.type];
+    var models = MODEL_LIBRARY[row.type];
+    var modelOpts = models.map(function(m){
+      return '<option value="'+m.id+'"'+(m.id===row.modelId?' selected':'')+'>'+m.name+'</option>';
+    }).join('');
+
+    var customFields = (row.type==='llm' && row.modelId==='custom-llm') ? (
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:5px;margin-top:6px">'+
+        '<div><div style="font-size:9px;color:var(--muted);margin-bottom:2px">Params (B)</div>'+
+          '<input class="sinp" type="number" min="0.1" step="0.1" value="'+row.customP+'" onchange="updateRow('+row.id+',\'customP\',+this.value);patchCustomLLM('+row.id+')"></div>'+
+        '<div><div style="font-size:9px;color:var(--muted);margin-bottom:2px">Layers</div>'+
+          '<input class="sinp" type="number" min="1" value="'+row.customL+'" onchange="updateRow('+row.id+',\'customL\',+this.value);patchCustomLLM('+row.id+')"></div>'+
+        '<div><div style="font-size:9px;color:var(--muted);margin-bottom:2px">KV Heads</div>'+
+          '<input class="sinp" type="number" min="1" value="'+row.customKV+'" onchange="updateRow('+row.id+',\'customKV\',+this.value);patchCustomLLM('+row.id+')"></div>'+
+        '<div><div style="font-size:9px;color:var(--muted);margin-bottom:2px">Head Dim</div>'+
+          '<input class="sinp" type="number" min="64" step="64" value="'+row.customHD+'" onchange="updateRow('+row.id+',\'customHD\',+this.value);patchCustomLLM('+row.id+')"></div>'+
+      '</div>'
+    ) : '';
+
+    var llmParams = row.type==='llm' ? (
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px">'+
+        '<div><div style="font-size:9px;color:var(--muted);margin-bottom:2px">Precision</div>'+
+          '<select class="sinp" onchange="updateRow('+row.id+',\'prec\',this.value)">'+
+            ['fp32','fp16','bf16','int8','int4'].map(function(p){ return '<option value="'+p+'"'+(p===row.prec?' selected':'')+'>'+p.toUpperCase()+'</option>'; }).join('')+
+          '</select></div>'+
+        '<div><div style="font-size:9px;color:var(--muted);margin-bottom:2px">Workload</div>'+
+          '<select class="sinp" onchange="updateRow('+row.id+',\'workload\',this.value)">'+
+            [{v:'inference',l:'Inference'},{v:'lora',l:'LoRA Fine-tune'},{v:'training',l:'Full Training'}].map(function(w){ return '<option value="'+w.v+'"'+(w.v===row.workload?' selected':'')+'>'+w.l+'</option>'; }).join('')+
+          '</select></div>'+
+        '<div><div style="font-size:9px;color:var(--muted);margin-bottom:2px">Context tokens</div>'+
+          '<input class="sinp" type="number" min="512" step="512" value="'+row.ctx+'" onchange="updateRow('+row.id+',\'ctx\',+this.value)"></div>'+
+        '<div><div style="font-size:9px;color:var(--muted);margin-bottom:2px">Concurrent users</div>'+
+          '<input class="sinp" type="number" min="1" value="'+row.users+'" onchange="updateRow('+row.id+',\'users\',+this.value)"></div>'+
+      '</div>'
+    ) : '';
+
+    var streamParams = (row.type==='stt'||row.type==='tts') ? (
+      '<div style="margin-top:8px;display:flex;align-items:center;gap:8px">'+
+        '<div style="font-size:9px;color:var(--muted)">Concurrent streams</div>'+
+        '<input class="sinp" type="number" min="1" value="'+row.streams+'" style="width:70px" onchange="updateRow('+row.id+',\'streams\',+this.value)">'+
+      '</div>'
+    ) : '';
+
+    var imgParams = row.type==='img' ? (
+      '<div style="margin-top:8px;display:flex;align-items:center;gap:8px">'+
+        '<div style="font-size:9px;color:var(--muted)">Parallel jobs</div>'+
+        '<input class="sinp" type="number" min="1" value="'+row.jobs+'" style="width:70px" onchange="updateRow('+row.id+',\'jobs\',+this.value)">'+
+      '</div>'
+    ) : '';
+
+    var embParams = row.type==='emb' ? (
+      '<div style="margin-top:8px;display:flex;align-items:center;gap:8px">'+
+        '<div style="font-size:9px;color:var(--muted)">Instances</div>'+
+        '<input class="sinp" type="number" min="1" value="'+row.batchSize+'" style="width:70px" onchange="updateRow('+row.id+',\'batchSize\',+this.value)">'+
+      '</div>'
+    ) : '';
+
+    var cvParams = row.type==='cv' ? (
+      '<div style="margin-top:8px;display:flex;align-items:center;gap:8px">'+
+        '<div style="font-size:9px;color:var(--muted)">Parallel camera streams</div>'+
+        '<input class="sinp" type="number" min="1" value="'+row.streams+'" style="width:70px" onchange="updateRow('+row.id+',\'streams\',+this.value)">'+
+      '</div>'
+    ) : '';
+
+    var rnkParams = row.type==='rnk' ? (
+      '<div style="margin-top:8px;display:flex;align-items:center;gap:8px">'+
+        '<div style="font-size:9px;color:var(--muted)">Concurrent reranking jobs</div>'+
+        '<input class="sinp" type="number" min="1" value="'+row.batchSize+'" style="width:70px" onchange="updateRow('+row.id+',\'batchSize\',+this.value)">'+
+      '</div>'
+    ) : '';
+
+    var vlmParams = row.type==='vlm' ? (
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px">'+
+        '<div><div style="font-size:9px;color:var(--muted);margin-bottom:2px">Precision</div>'+
+          '<select class="sinp" onchange="updateRow('+row.id+',\'prec\',this.value)">'+
+            ['fp16','bf16','int8','int4'].map(function(p){ return '<option value="'+p+'"'+(p===row.prec?' selected':'')+'>'+p.toUpperCase()+'</option>'; }).join('')+
+          '</select></div>'+
+        '<div><div style="font-size:9px;color:var(--muted);margin-bottom:2px">Concurrent users</div>'+
+          '<input class="sinp" type="number" min="1" value="'+row.users+'" onchange="updateRow('+row.id+',\'users\',+this.value)"></div>'+
+        '<div><div style="font-size:9px;color:var(--muted);margin-bottom:2px">Context tokens</div>'+
+          '<input class="sinp" type="number" min="512" step="512" value="'+row.ctx+'" onchange="updateRow('+row.id+',\'ctx\',+this.value)"></div>'+
+      '</div>'
+    ) : '';
+
+    var vidParams = row.type==='vid' ? (
+      '<div style="margin-top:8px;display:flex;align-items:center;gap:8px">'+
+        '<div style="font-size:9px;color:var(--muted)">Parallel generation jobs</div>'+
+        '<input class="sinp" type="number" min="1" value="'+row.jobs+'" style="width:70px" onchange="updateRow('+row.id+',\'jobs\',+this.value)">'+
+      '</div>'
+    ) : '';
+
+    return '<div class="stack-row" id="srow-'+row.id+'">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
+        '<span class="type-pill" style="background:'+meta.bg+';color:'+meta.color+'">'+meta.label+'</span>'+
+        '<button onclick="removeRow('+row.id+')" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1;padding:0" title="Remove">×</button>'+
+      '</div>'+
+      '<select class="sinp" style="width:100%" onchange="updateRow('+row.id+',\'modelId\',this.value)">'+modelOpts+'</select>'+
+      customFields + llmParams + streamParams + imgParams + embParams + cvParams + rnkParams + vlmParams + vidParams +
+    '</div>';
+  }).join('');
+}
+
+function patchCustomLLM(rowId) {
+  var row = stack.find(function(r){ return r.id===rowId; });
+  if (!row) return;
+  var m = MODEL_LIBRARY.llm.find(function(m){ return m.id==='custom-llm'; });
+  if (m) { m.p=row.customP; m.l=row.customL; m.kv=row.customKV; m.hd=row.customHD; }
+  recalc();
+}
+
+/* ═══════════════════════════════════════
+   MATH ENGINE (old calc kept, commented)
+═══════════════════════════════════════ */
+/*
+function calc(params, pk, wk, llm, ctx, users, gvram, gtdp, gpusOwned, qpd, retention, numDocs) {
+  var precBytes = PREC[pk];
+  var mWeights  = params * precBytes;
+  var mWorkload = params * WLOAD[wk];
+  var mKV       = llm ? 0.000125 * params * precBytes * ctx * users : 0;
+  var mAct      = wk === 'training' ? params * 0.5 : 2.0;
+  var raw       = mWeights + mWorkload + mKV + mAct;
+  var tot       = raw * 1.20;
+  var n         = Math.ceil(tot / gvram);
+  var avail     = n * gvram;
+  var head      = avail - tot;
+  var fill      = Math.min((tot / avail) * 100, 100);
+  var powerW    = gtdp ? n * gtdp : n * (gvram * 5);
+  var cpuRam    = Math.ceil(mWeights * 1.5);
+  var cpuCores  = Math.max(16, n * 8);
+  var gpusToBuy   = Math.max(0, n - gpusOwned);
+  var gpusSurplus = Math.max(0, gpusOwned - n);
+  var modelDiskGB = parseFloat((mWeights * 1.1).toFixed(1));
+  var avgTokens   = llm ? Math.min(ctx, 2048) : 512;
+  var logGB       = parseFloat((qpd * avgTokens * 2.5 * retention / 1e9).toFixed(2));
+  var vdbGB       = parseFloat((numDocs * 0.00003).toFixed(3));
+  var totalStorGB = parseFloat((modelDiskGB + logGB + vdbGB).toFixed(1));
+  return {
+    mWeights, mWorkload, mKV, mAct, raw, tot, n, avail, head, fill,
+    powerW, cpuRam, cpuCores,
+    gpusToBuy, gpusSurplus,
+    modelDiskGB, logGB, vdbGB, totalStorGB,
+    wMulti:  n > 1,
+    wNvLink: n > 2,
+    wPower:  powerW > 2000,
+    wScale:  tot > gvram * 8
+  };
+}
+*/
+
+function calcLLM(item, model) {
+  var precB = PREC[item.prec] || 2.0;
+  var p     = (model.activeP != null ? model.activeP : model.p) || 8;
+  var l     = model.l || 32;
+  var kv    = model.kv || 8;
+  var hd    = model.hd || 128;
+  var weights     = p * precB;
+  var wload       = p * (WLOAD[item.workload] || 0);
+  var activations = item.workload === 'training' ? p * 0.5 : 0.5;
+  var kvCache     = 0;
+  if (item.workload === 'inference' || item.workload === 'lora') {
+    kvCache = (l * kv * hd * 2 * (item.ctx || 4096) * (item.users || 1) * precB) / 1e9;
+    if (_flashAttn) kvCache *= 0.60;
+  }
+  var raw    = weights + wload + kvCache + activations;
+  var spiked = raw * (1 + _spikeBuffer);
+  var total  = spiked * 1.20;
+  return { total:total, breakdown:{ weights:weights, wload:wload, kvCache:kvCache, activations:activations,
+    spike:spiked-raw, buffer:total-spiked, raw:raw } };
+}
+
+function calcNonLLM(item, model) {
+  var instances = item.streams || item.jobs || item.batchSize || 1;
+  var raw    = model.peakVRAM * instances;
+  var spiked = raw * (1 + _spikeBuffer * 0.5);
+  var total  = spiked * 1.15;
+  return { total:total, breakdown:{ base:model.peakVRAM, instances:instances, spike:spiked-raw, buffer:total-spiked, raw:raw } };
+}
+
+function calcVLM(item, model) {
+  var precB = PREC[item.prec] || 2.0;
+  var p     = model.p || 8;
+  var l     = model.l || 32;
+  var kv    = model.kv || 8;
+  var hd    = model.hd || 128;
+  var voh   = model.visionOH || 1.5;  // vision encoder (CLIP/SigLIP)
+  var weights     = p * precB;
+  var wload       = p * (WLOAD[item.workload] || 0);
+  var activations = 0.5;
+  var kvCache     = 0;
+  if (item.workload === 'inference' || item.workload === 'lora') {
+    kvCache = (l * kv * hd * 2 * (item.ctx || 2048) * (item.users || 1) * precB) / 1e9;
+    if (_flashAttn) kvCache *= 0.60;
+  }
+  var raw    = weights + wload + kvCache + activations + voh;
+  var spiked = raw * (1 + _spikeBuffer);
+  var total  = spiked * 1.20;
+  return {
+    total: total,
+    breakdown: { weights:weights, visionOH:voh, wload:wload, kvCache:kvCache, activations:activations, spike:spiked-raw, buffer:total-spiked, raw:raw }
+  };
+}
+
+function calcStack(stackArr, gvram, gtdp, gpusOwned, qpd, retention, numDocs) {
+  var items = stackArr.map(function(item) {
+    var models = MODEL_LIBRARY[item.type] || [];
+    var model  = models.find(function(m){ return m.id === item.modelId; }) || null;
+    if (!model) return { item:item, model:null, vram:0, breakdown:{} };
+    var res = item.type === 'llm' ? calcLLM(item, model)
+            : item.type === 'vlm' ? calcVLM(item, model)
+            : calcNonLLM(item, model);
+    return { item:item, model:model, vram:res.total, breakdown:res.breakdown };
+  });
+
+  var modelVRAM = items.reduce(function(s,r){ return s+r.vram; }, 0);
+  var servingOH = SERVING_OVERHEAD[_servingFW] || 0;
+  var perGPUFixed = _cudaOverhead + servingOH;
+
+  // Iterative GPU count: model VRAM + per-GPU overheads
+  var n = modelVRAM > 0 ? Math.ceil(modelVRAM / gvram) : 1;
+  var effectiveVRAM = modelVRAM + n * perGPUFixed;
+  if (effectiveVRAM > n * gvram) n = Math.ceil(effectiveVRAM / gvram);
+  effectiveVRAM = modelVRAM + n * perGPUFixed;
+  if (_haMode) n++;
+
+  var avail   = n * gvram;
+  var pct     = avail > 0 ? Math.min(100, Math.round(effectiveVRAM / avail * 100)) : 0;
+
+  // ── Confidence Intervals ──────────────────────────────────
+  // P25: Flash Attn on, lighter spike, no HA, no serving overhead
+  var modelVRAM_p25 = stackArr.reduce(function(s, item) {
+    var models = MODEL_LIBRARY[item.type] || [];
+    var model = models.find(function(m){ return m.id === item.modelId; });
+    if (!model) return s;
+    if (item.type === 'llm' || item.type === 'vlm') {
+      var precB = PREC[item.prec] || 2.0;
+      var p = (model.activeP != null ? model.activeP : model.p) || 8;
+      var l = model.l||32; var kv = model.kv||8; var hd = model.hd||128;
+      var voh = item.type==='vlm' ? (model.visionOH||1.5) : 0;
+      var kvC = (l*kv*hd*2*(item.ctx||4096)*(item.users||1)*precB/1e9) * 0.60;
+      var raw = p*precB + p*(WLOAD[item.workload]||0) + kvC + 0.5 + voh;
+      return s + raw * (1 + _spikeBuffer*0.5) * 1.15;
+    } else {
+      var inst = item.streams||item.jobs||item.batchSize||1;
+      return s + model.peakVRAM * inst * 1.10;
+    }
+  }, 0);
+  var n_p25 = Math.max(1, Math.ceil((modelVRAM_p25 + Math.ceil(modelVRAM_p25/gvram)*_cudaOverhead) / gvram));
+
+  // P90: no Flash Attn, 25% spike, full overhead + HA
+  var flashWas = _flashAttn; _flashAttn = false;
+  var modelVRAM_p90 = stackArr.reduce(function(s, item) {
+    var models = MODEL_LIBRARY[item.type] || [];
+    var model = models.find(function(m){ return m.id === item.modelId; });
+    if (!model) return s;
+    if (item.type === 'llm' || item.type === 'vlm') {
+      var precB = PREC[item.prec] || 2.0;
+      var p = (model.activeP != null ? model.activeP : model.p) || 8;
+      var l = model.l||32; var kv = model.kv||8; var hd = model.hd||128;
+      var voh = item.type==='vlm' ? (model.visionOH||1.5) : 0;
+      var kvC = l*kv*hd*2*(item.ctx||4096)*(item.users||1)*precB/1e9;
+      var raw = p*precB + p*(WLOAD[item.workload]||0) + kvC + 0.5 + voh;
+      return s + raw * 1.25 * 1.20;
+    } else {
+      var inst = item.streams||item.jobs||item.batchSize||1;
+      return s + model.peakVRAM * inst * 1.35;
+    }
+  }, 0);
+  _flashAttn = flashWas;
+  var n_p90_base = Math.ceil(modelVRAM_p90 / gvram);
+  var n_p90 = Math.ceil((modelVRAM_p90 + n_p90_base * (perGPUFixed * 1.5)) / gvram) + 1;
+
+  var ci = {
+    optimistic:   { n:n_p25, label:'Optimistic (P25)', desc:'Flash Attn, light load, no HA' },
+    baseline:     { n:n,     label:'Baseline (P50)',   desc:'Current settings, standard overhead' },
+    conservative: { n:n_p90, label:'Conservative (P90)', desc:'Peak load, full overhead, N+1 HA' }
+  };
+  // ─────────────────────────────────────────────────────────
+
+  var powerW      = gtdp ? n * gtdp : n * (gvram * 5);
+  var llmItems    = items.filter(function(r){ return (r.item.type==='llm'||r.item.type==='vlm') && r.model; });
+  var cpuRam      = Math.max(8, Math.ceil(llmItems.reduce(function(s,r){ return s+r.vram*0.8; },0)));
+  var cpuCores    = Math.max(16, n * 8);
+  var gpusToBuy   = Math.max(0, n - gpusOwned);
+  var gpusSurplus = Math.max(0, gpusOwned - n);
+  var nonLLMDisk  = items.filter(function(r){ return r.item.type!=='llm' && r.model; })
+                        .reduce(function(s,r){ return s + (r.model.baseVRAM||0) * 1.1; }, 0);
+  var modelDiskGB = parseFloat((llmItems.reduce(function(s,r){ return s+r.vram*1.1; },0) + nonLLMDisk).toFixed(1));
+  var llmCtx      = llmItems.length ? (llmItems[0].item.ctx || 2048) : 512;
+  var avgTokens   = Math.min(llmCtx, 2048);
+  var logGB       = parseFloat((qpd * avgTokens * 2.5 * retention / 1e9).toFixed(2));
+  var vdbGB       = parseFloat((numDocs * 0.00003).toFixed(3));
+  var totalStorGB = parseFloat((modelDiskGB + logGB + vdbGB).toFixed(1));
+  var wMulti      = n > 1;
+  var wNvLink     = n > 2;
+  var wPower      = powerW > 2000;
+  var wScale      = modelVRAM > gvram * 8;
+  var gpuKey      = document.getElementById('gpu-sel') ? document.getElementById('gpu-sel').value : 'rtx4090';
+  var unitPrice   = GPRICE[gpuKey] || null;
+  var gpuCostEst  = (unitPrice && gpusToBuy > 0) ? unitPrice * gpusToBuy : null;
+  var rackInfo    = GRACK[gpuKey] || 'custom';
+  var timelineText;
+  if (gpusToBuy === 0) {
+    timelineText = 'No procurement needed';
+  } else {
+    var gpuTier2  = GPU_TIER[gpuKey] || 'high';
+    var rtMap    = REGIONAL_TIMELINE[gpuTier2] || REGIONAL_TIMELINE.high;
+    var baseTime = rtMap[_region] || rtMap.other;
+    var bulkNote = gpusToBuy > 8 ? ' · large cluster: add 8–12 wks' : '';
+    timelineText = baseTime + bulkNote;
+  }
+  var networkReq  = n<=4  ? '25 GbE (per node)' : n<=8 ? '100 GbE or NDR InfiniBand' : 'NDR InfiniBand (multi-node)';
+  var rackUnits   = n<=2  ? 'Tower / 2U' : n<=4 ? '4U server' : n<=8 ? '8–10U (DGX class)' : Math.ceil(n/8)+'× 10U nodes + networking';
+  var coolingBTU  = Math.round(powerW * 3.41);
+  var coolingNote = coolingBTU>17000 ? 'Liquid cooling recommended' : coolingBTU>10000 ? 'Precision AC required' : 'Standard server room AC';
+  var cudaReq     = 'Ubuntu 22.04 LTS · CUDA 12.4+ · Driver 550+';
+  var psuNote     = n>=4  ? 'Redundant PSU required (N+1)' : 'Redundant PSU recommended';
+  return { items:items, totalVRAM:effectiveVRAM, modelVRAM:modelVRAM, perGPUFixed:perGPUFixed,
+    n:n, avail:avail, pct:pct, powerW:powerW, ci:ci,
+    cpuRam:cpuRam, cpuCores:cpuCores, gpusToBuy:gpusToBuy, gpusSurplus:gpusSurplus,
+    modelDiskGB:modelDiskGB, logGB:logGB, vdbGB:vdbGB, totalStorGB:totalStorGB,
+    wMulti:wMulti, wNvLink:wNvLink, wPower:wPower, wScale:wScale,
+    unitPrice:unitPrice, gpuCostEst:gpuCostEst, rackInfo:rackInfo, timelineText:timelineText,
+    servingFW:_servingFW, servingOH:servingOH, flashAttn:_flashAttn, haMode:_haMode,
+    gpusOwned:gpusOwned,
+    networkReq:networkReq, rackUnits:rackUnits, coolingBTU:coolingBTU, coolingNote:coolingNote, cudaReq:cudaReq, psuNote:psuNote };
+}
+
+/* ═══════════════════════════════════════
+   AI ADVISOR
+═══════════════════════════════════════ */
+var ADVISOR_RULES = [
+  { re:/voice|speech|speak|transcri|audio|call.?center|stt|dictati/i,
+    row:{ type:'stt', modelId:'whisper-large', streams:5 } },
+  { re:/text.?to.?speech|tts|narrat|speak back|voice.?response/i,
+    row:{ type:'tts', modelId:'kokoro', streams:5 } },
+  { re:/image|picture|photo|visual.?generat|stable.?diffusion|flux|sdxl|art.?generat/i,
+    row:{ type:'img', modelId:'sdxl', jobs:2 } },
+  { re:/search|retriev|rag|embed|vector|semantic|similar|knowledge.?base|document.?search/i,
+    row:{ type:'emb', modelId:'bge-large', batchSize:1 } },
+  { re:/chat|llm|language.?model|answer|summar|classif|extract|code.?assist|copilot|question|generat.?text/i,
+    row:{ type:'llm', modelId:'llama31-8b', prec:'int8', workload:'inference', ctx:4096, users:10 } },
+];
+
+function runOfflineAdvisor() {
+  var text = (document.getElementById('advisor-input').value||'').trim();
+  if (!text) { alert('Please describe your project first.'); return; }
+  var rows = ADVISOR_RULES.filter(function(r){ return r.re.test(text); }).map(function(r){ return Object.assign({},r.row); });
+  if (!rows.length) { alert('Could not detect workload types. Try mentioning: chat, voice, image, search, or transcription.'); return; }
+  var large = /enterprise|production|1000 user|500 user|high.?volume|large.?scale/i.test(text);
+  var small  = /pilot|poc|prototype|small.?team|dev.?only|test.?env/i.test(text);
+  rows = rows.map(function(row){
+    if (row.type==='llm') {
+      if (large) { row.users=50; row.modelId='llama31-70b'; row.prec='int4'; }
+      if (small) { row.users=5;  row.modelId='llama31-8b';  row.prec='int8'; }
+    }
+    return row;
+  });
+  stack=[]; _rowId=0;
+  rows.forEach(function(row){ addRow(row.type, row); });
+  document.getElementById('advisor-result').textContent = 'Detected '+rows.length+' workload(s): '+rows.map(function(r){ return TYPE_META[r.type].label; }).join(', ');
+}
+
+function toggleAISettings() {
+  var el = document.getElementById('ai-settings');
+  el.style.display = el.style.display==='none' ? 'block' : 'none';
+  var saved = sessionStorage.getItem('advisor_key');
+  if (saved) document.getElementById('ai-key').value = saved;
+}
+
+async function runAIAdvisor() {
+  var text = (document.getElementById('advisor-input').value||'').trim();
+  var key  = (document.getElementById('ai-key').value||'').trim();
+  var prov = document.getElementById('ai-provider').value;
+  if (!text) { alert('Please describe your project first.'); return; }
+  if (!key)  { alert('Please enter your API key.'); return; }
+  sessionStorage.setItem('advisor_key', key);
+  var btn = document.getElementById('btn-ai-analyze');
+  btn.textContent='Analyzing…'; btn.disabled=true;
+  try {
+    var rows = await enhanceWithAI(text, key, prov);
+    if (!Array.isArray(rows)||!rows.length) throw new Error('Empty response');
+    stack=[]; _rowId=0;
+    rows.forEach(function(row){ addRow(row.type, row); });
+    document.getElementById('advisor-result').textContent = 'AI detected '+rows.length+' workload(s).';
+  } catch(e) {
+    alert('AI advisor error: '+e.message+'\n\nFalling back to offline analysis.');
+    runOfflineAdvisor();
+  } finally {
+    btn.textContent='Analyze with AI'; btn.disabled=false;
+  }
+}
+
+async function enhanceWithAI(description, apiKey, provider) {
+  var sys = 'You are a GPU infrastructure advisor. Given a project description, return a JSON array of AI workloads. Format: [{type:"llm"|"stt"|"tts"|"img"|"emb", modelId:string, prec?:string, workload?:string, ctx?:number, users?:number, streams?:number, jobs?:number, batchSize?:number}]. Valid modelIds — llm:[llama32-1b,llama32-3b,llama31-8b,llama31-70b,llama31-405b,mistral-7b,mixtral-8x7b,qwen25-7b,qwen25-14b,qwen25-32b,qwen25-72b,gemma2-9b,gemma2-27b,deepseek-7b,deepseek-70b,deepseek-671b,phi3-mini,phi4-14b,yi-34b,custom-llm], stt:[whisper-tiny,whisper-base,whisper-small,whisper-medium,whisper-large,faster-whisper], tts:[kokoro,melotts,styletts2,xtts2,bark], img:[sd15,sdxl,sd35-medium,sd35-large,flux-schnell,flux-dev], emb:[bge-small,bge-large,e5-large,nomic,jina-v3]. Return ONLY valid JSON array, no prose.';
+  if (provider==='anthropic') {
+    var res = await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':apiKey,'anthropic-version':'2023-06-01','content-type':'application/json'},body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:512,system:sys,messages:[{role:'user',content:description}]})});
+    var d = await res.json(); if(d.error) throw new Error(d.error.message);
+    return JSON.parse(d.content[0].text);
+  }
+  var res = await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{'Authorization':'Bearer '+apiKey,'content-type':'application/json'},body:JSON.stringify({model:'gpt-4o-mini',max_tokens:512,messages:[{role:'system',content:sys},{role:'user',content:description}]})});
+  var d = await res.json(); if(d.error) throw new Error(d.error.message);
+  return JSON.parse(d.choices[0].message.content);
+}
+
+/* ═══════════════════════════════════════
+   MODE MANAGEMENT
+═══════════════════════════════════════ */
+var _mode = 'expert';
+
+function setMode(mode) {
+  _mode = mode;
+  try { localStorage.setItem('gpu_calc_mode', mode); } catch(e){}
+  // Toggle left panels
+  var gp = document.getElementById('guided-panel');
+  var ep = document.getElementById('expert-panel');
+  if (gp) { if(mode==='guided'){ gp.classList.add('active'); } else { gp.classList.remove('active'); } }
+  if (ep) { if(mode==='expert'){ ep.classList.remove('hidden'); } else { ep.classList.add('hidden'); } }
+  // Toggle right panels
+  var gr = document.getElementById('guided-results');
+  var er = document.getElementById('expert-results');
+  if (gr) { if(mode==='guided'){ gr.classList.add('active'); } else { gr.classList.remove('active'); } }
+  if (er) { if(mode==='expert'){ er.classList.remove('hidden'); } else { er.classList.add('hidden'); } }
+  // Toggle header buttons
+  var rfq = document.getElementById('btn-rfq');
+  var grfq = document.getElementById('btn-guided-rfq-hdr');
+  if (rfq) rfq.style.display = mode==='expert' ? '' : 'none';
+  if (grfq) grfq.style.display = mode==='guided' ? '' : 'none';
+  var bpRFQ = document.getElementById('btn-print-rfq');
+  var bpRFP = document.getElementById('btn-print-rfp');
+  if (bpRFQ) bpRFQ.style.display = mode==='expert' ? '' : 'none';
+  if (bpRFP) bpRFP.style.display = mode==='expert' ? '' : 'none';
+  // Active state on toggle buttons
+  var bg = document.getElementById('btn-guided');
+  var be = document.getElementById('btn-expert');
+  if (bg) { bg.classList.toggle('active', mode==='guided'); }
+  if (be) { be.classList.toggle('active', mode==='expert'); }
+  // Re-render results for current mode
+  recalc();
+}
+
+/* ═══════════════════════════════════════
+   GUIDED MODE STATE & LOGIC
+═══════════════════════════════════════ */
+var _guidedUC = null;
+var _guidedTeamSize = 25;
+var _guidedDeploy = 'production';
+
+var UC_TILES = {
+  'support-bot': { label:'Customer Support Bot', makeStack: function(users,deploy){
+    return [{type:'emb',modelId:'bge-large',batchSize:1},{type:'llm',modelId:'llama31-8b',prec:'int8',workload:'inference',ctx:4096,users:users}];
+  }},
+  'voice-assistant': { label:'Voice Assistant', makeStack: function(users,deploy){
+    var streams=Math.max(1,Math.ceil(users/5));
+    return [{type:'stt',modelId:'whisper-large',streams:streams},{type:'llm',modelId:'llama31-8b',prec:'int8',workload:'inference',ctx:4096,users:users},{type:'tts',modelId:'kokoro',streams:streams}];
+  }},
+  'doc-search': { label:'Document Search & Q&A', makeStack: function(users,deploy){
+    var modelId=(users>20&&deploy==='production')?'qwen25-14b':'llama31-8b';
+    return [{type:'emb',modelId:'bge-large',batchSize:1},{type:'llm',modelId:modelId,prec:'int8',workload:'inference',ctx:8192,users:users}];
+  }},
+  'image-gen': { label:'Image Generator', makeStack: function(users,deploy){
+    var jobs=deploy==='pilot'?1:Math.max(1,Math.ceil(users/50));
+    return [{type:'img',modelId:'sdxl',jobs:jobs}];
+  }},
+  'code-assist': { label:'Code Assistant', makeStack: function(users,deploy){
+    var modelId=(users>20&&deploy==='production')?'llama31-70b':'qwen25-14b';
+    var prec=(users>20&&deploy==='production')?'int4':'int8';
+    return [{type:'llm',modelId:modelId,prec:prec,workload:'inference',ctx:16384,users:users}];
+  }},
+  'analytics-ai': { label:'Data Analytics AI', makeStack: function(users,deploy){
+    return [{type:'llm',modelId:'qwen25-14b',prec:'int8',workload:'inference',ctx:8192,users:Math.max(1,Math.ceil(users/2))}];
+  }},
+  'full-agent': { label:'Full AI Agent', makeStack: function(users,deploy){
+    var streams=Math.max(1,Math.ceil(users/5));
+    var modelId=deploy==='pilot'?'llama31-8b':'llama31-70b';
+    var prec=deploy==='pilot'?'int8':'int4';
+    return [{type:'stt',modelId:'whisper-large',streams:streams},{type:'llm',modelId:modelId,prec:prec,workload:'inference',ctx:16384,users:users},{type:'tts',modelId:'xtts2',streams:streams},{type:'emb',modelId:'bge-large',batchSize:1}];
+  }}
+};
+
+function selectTile(ucKey) {
+  var tiles = document.querySelectorAll('.uc-tile');
+  for (var i=0; i<tiles.length; i++) { tiles[i].classList.remove('sel'); }
+  var el = document.getElementById('tile-' + ucKey);
+  if (el) el.classList.add('sel');
+  _guidedUC = ucKey;
+  var qCard = document.getElementById('guided-questions');
+  if (qCard) qCard.style.display = '';
+  _rebuildGuidedStack();
+}
+
+function setTeamSize(n, btn) {
+  _guidedTeamSize = n;
+  var pills = btn.parentElement.querySelectorAll('.qpill');
+  for (var i=0; i<pills.length; i++) { pills[i].classList.remove('sel'); }
+  btn.classList.add('sel');
+  _rebuildGuidedStack();
+}
+
+function setDeployment(deploy, btn) {
+  _guidedDeploy = deploy;
+  var pills = btn.parentElement.querySelectorAll('.qpill');
+  for (var i=0; i<pills.length; i++) { pills[i].classList.remove('sel'); }
+  btn.classList.add('sel');
+  _rebuildGuidedStack();
+}
+
+function onGuidedGPUChange(val) {
+  var expertSel = document.getElementById('gpu-sel');
+  if (expertSel) {
+    expertSel.value = val;
+    expertSel.dispatchEvent(new Event('change'));
+  }
+  recalc();
+}
+
+function _rebuildGuidedStack() {
+  if (!_guidedUC || !UC_TILES[_guidedUC]) return;
+  var items = UC_TILES[_guidedUC].makeStack(_guidedTeamSize, _guidedDeploy);
+  stack = [];
+  var sl = document.getElementById('stack-list');
+  if (sl) sl.innerHTML = '';
+  for (var i=0; i<items.length; i++) {
+    addRow(items[i].type, items[i]);
+  }
+  recalc();
+}
+
+var TYPE_FRIENDLY = {
+  llm:{icon:'',label:'AI brain',desc:'language model'},
+  stt:{icon:'',label:'Voice input',desc:'speech-to-text'},
+  tts:{icon:'',label:'Voice output',desc:'text-to-speech'},
+  img:{icon:'',label:'Image creation',desc:'image generation'},
+  emb:{icon:'',label:'Document search',desc:'embedding model'},
+  cv: {icon:'',label:'Vision',desc:'computer vision'},
+  rnk:{icon:'',label:'Reranker',desc:'reranking model'},
+  vlm:{icon:'',label:'Vision-Language',desc:'vision-language model'},
+  vid:{icon:'',label:'Video generation',desc:'video generation model'},
+};
+
+function renderGuidedResults(R) {
+  if (!R || !_guidedUC) return;
+
+  // Traffic light
+  var dot = document.getElementById('tl-dot');
+  var verdict = document.getElementById('tl-verdict');
+  var sub = document.getElementById('tl-sub');
+  if (dot && verdict) {
+    if (R.pct < 70) {
+      dot.style.color = 'var(--accent-green)';
+      verdict.textContent = 'Ready to Deploy';
+      if (sub) sub.textContent = 'Your selected GPU has enough headroom for this workload.';
+    } else if (R.pct < 90) {
+      dot.style.color = 'var(--warn-amber)';
+      verdict.textContent = 'Adequate — Limited Headroom';
+      if (sub) sub.textContent = 'This will work, but consider a larger GPU for growth.';
+    } else {
+      dot.style.color = 'var(--warn-red)';
+      verdict.textContent = 'Under-Provisioned';
+      if (sub) sub.textContent = 'This workload needs more GPU memory. Choose a larger GPU or fewer users.';
+    }
+  }
+
+  // Executive summary
+  var summary = document.getElementById('guided-summary');
+  if (summary) summary.style.display = '';
+  var gsGPUs = document.getElementById('gs-gpus');
+  var gsCost = document.getElementById('gs-cost');
+  var gsUsers = document.getElementById('gs-users');
+  if (gsGPUs) gsGPUs.textContent = R.n + (R.n === 1 ? ' server' : ' servers');
+  if (gsCost) {
+    if (R.gpuCostEst !== null && R.gpuCostEst !== undefined) {
+      var lo = Math.round(R.gpuCostEst * 0.9 / 1000) * 1000;
+      var hi = Math.round(R.gpuCostEst * 1.15 / 1000) * 1000;
+      gsCost.textContent = '$' + lo.toLocaleString() + ' – $' + hi.toLocaleString();
+    } else {
+      gsCost.textContent = 'Request custom quote';
+    }
+  }
+  if (gsUsers) gsUsers.textContent = 'Up to ' + _guidedTeamSize + (R.n > 0 ? ' people' : '');
+  var gsTimeline = document.getElementById('gs-timeline');
+  if (gsTimeline && R.timelineText) gsTimeline.textContent = R.timelineText;
+
+  // What powers this
+  var powers = document.getElementById('guided-powers');
+  var powersList = document.getElementById('guided-powers-list');
+  if (powers && powersList && R.items) {
+    powersList.innerHTML = '';
+    R.items.forEach(function(r) {
+      if (!r || !r.model) return;
+      var tf = TYPE_FRIENDLY[r.item.type] || {icon:'', label:r.item.type, desc:''};
+      var div = document.createElement('div');
+      div.className = 'power-item';
+      div.innerHTML = '<span class="power-icon">' + tf.icon + '</span>' +
+        '<span class="power-text"><strong>' + tf.label + '</strong>: ' + r.model.name + '</span>';
+      powersList.appendChild(div);
+    });
+    powers.style.display = '';
+  }
+
+  // Show vendor button
+  var rfqWrap = document.getElementById('guided-rfq-wrap');
+  if (rfqWrap) rfqWrap.style.display = '';
+}
+
+function copyGuidedRFQ() {
+  if (!_guidedUC) return;
+  var ucLabel = (UC_TILES[_guidedUC] || {}).label || _guidedUC;
+  var gsGPUs = document.getElementById('gs-gpus');
+  var gsCost = document.getElementById('gs-cost');
+  var gsUsers = document.getElementById('gs-users');
+  var powersList = document.getElementById('guided-powers-list');
+
+  var powers = '';
+  if (powersList) {
+    var items = powersList.querySelectorAll('.power-item');
+    items.forEach(function(el) { powers += '  • ' + el.textContent.trim() + '\n'; });
+  }
+
+  var text = [
+    'AI INFRASTRUCTURE VENDOR SUMMARY',
+    '================================',
+    '',
+    'Use Case: ' + ucLabel,
+    'Team Size: ' + _guidedTeamSize + ' simultaneous users',
+    'Deployment: ' + (_guidedDeploy === 'pilot' ? 'Pilot / Proof of Concept' : 'Production'),
+    '',
+    'RECOMMENDATION',
+    '--------------',
+    'GPUs Required: ' + (gsGPUs ? gsGPUs.textContent : '—'),
+    'Estimated Cost: ' + (gsCost ? gsCost.textContent : '—'),
+    'Procurement Time: 6 – 10 weeks',
+    '',
+    'AI COMPONENTS',
+    '-------------',
+    powers,
+    'NOTES',
+    '-----',
+    '• All AI runs fully on-premises — no data leaves your network.',
+    '• Costs are hardware estimates only; software is open source.',
+    '• Final configuration to be confirmed with vendor based on exact usage patterns.',
+    '',
+    'Generated by On-Premises GPU Requirements Calculator',
+  ].join('\n');
+
+  var btn = document.getElementById('btn-guided-rfq');
+  var hdrBtn = document.getElementById('btn-guided-rfq-hdr');
+  try {
+    navigator.clipboard.writeText(text).then(function() {
+      if (btn) { btn.textContent = '✓ Copied!'; setTimeout(function(){ btn.textContent = 'Copy Vendor Summary'; }, 2000); }
+      if (hdrBtn) { hdrBtn.textContent = '✓ Copied!'; setTimeout(function(){ hdrBtn.textContent = 'Vendor Summary'; }, 2000); }
+    });
+  } catch(e) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    if (btn) btn.textContent = '✓ Copied!';
+  }
+}
+
+/* ═══════════════════════════════════════
+   HELPERS
+═══════════════════════════════════════ */
+function toggleMath(btnEl, blockId) {
+  var block = document.getElementById(blockId);
+  if (!block) return;
+  var isOpen = block.classList.toggle('open');
+  btnEl.textContent = isOpen ? 'Hide math ▴' : 'Show math ▾';
+}
+
+function fmtStor(gb) {
+  if (gb >= 1000) return (gb/1000).toFixed(1) + ' TB';
+  if (gb >= 1)    return gb.toFixed(1) + ' GB';
+  return (gb*1000).toFixed(0) + ' MB';
+}
+function fmtUSD(n) {
+  if (n === null) return 'Request quote';
+  if (n >= 1000000) return '~$' + (n/1000000).toFixed(1) + 'M USD';
+  if (n >= 1000)    return '~$' + (n/1000).toFixed(0) + 'K USD';
+  return '~$' + n.toLocaleString() + ' USD';
+}
+
+function setWarn(id, bool) {
+  var el = document.getElementById(id);
+  if (el) el.classList.toggle('on', bool);
+}
+
+/* ═══════════════════════════════════════
+   RECALC
+═══════════════════════════════════════ */
+function recalc() {
+  var gpuKey    = (document.getElementById('gpu-sel')||{}).value || 'rtx4090';
+  var gvram     = GVRAM[gpuKey] || parseFloat((document.getElementById('custom-vram')||{}).value) || 24;
+  var gtdp      = GTDP[gpuKey]  || null;
+  var gpusOwned = parseInt((document.getElementById('gpu-inventory')||{}).value, 10) || 0;
+  var qpd       = parseInt((document.getElementById('qpd-input')||{}).value, 10) || 0;
+  var retention = parseInt((document.getElementById('retention-input')||{}).value, 10) || 30;
+  var numDocs   = parseInt((document.getElementById('docs-input')||{}).value, 10) || 0;
+
+  if (stack.length === 0) {
+    var els = ['total-gb','stack-total-display'];
+    els.forEach(function(id){ var e=document.getElementById(id); if(e) e.textContent='—'; });
+    var smr = document.getElementById('stack-model-rows');
+    if (smr) smr.innerHTML='<p style="color:var(--muted);font-size:12px">Add models to the stack to see results.</p>';
+    // Clear hero stats
+    ['gpu-count-hero','avail-vram-hero','util-pct-hero'].forEach(function(id){
+      var e=document.getElementById(id); if(e) e.textContent='—';
+    });
+    var cbf = document.getElementById('cap-bar-fill'); if(cbf) cbf.style.width='0%';
+    var brq2 = document.getElementById('bar-req');   if(brq2) brq2.textContent = 'Required: —';
+    var bav2 = document.getElementById('bar-avail'); if(bav2) bav2.textContent = 'Available: —';
+    var vbb = document.getElementById('vram-breakdown-body');
+    if (vbb) vbb.innerHTML='<tr><td style="color:var(--text-dim);padding:5px 0" colspan="2">Add an LLM to the stack to see breakdown.</td></tr>';
+    var sem = document.getElementById('stack-empty-msg'); if(sem) sem.style.display='';
+    return;
+  }
+
+  var R = calcStack(stack, gvram, gtdp, gpusOwned, qpd, retention, numDocs);
+  _lastR = R;
+
+  // Hero
+  var tgb = document.getElementById('total-gb');
+  if(tgb) tgb.innerHTML = R.totalVRAM.toFixed(1) + '<span class="unit">GB</span>';
+  var std = document.getElementById('stack-total-display'); if(std) std.textContent = R.totalVRAM.toFixed(1)+' GB';
+  var cbf = document.getElementById('cap-bar-fill');
+  if (cbf) { cbf.style.width=R.pct+'%'; cbf.style.background=R.pct<80?'var(--accent)':R.pct<95?'var(--warn-amber, #EF9F27)':'var(--warn-red, #E24B4A)'; }
+  var brq = document.getElementById('bar-req');
+  if (brq) brq.textContent = 'Required: ' + R.totalVRAM.toFixed(1) + ' GB';
+  var bav = document.getElementById('bar-avail');
+  if (bav) bav.textContent = 'Available: ' + R.avail.toFixed(0) + ' GB';
+  var gch = document.getElementById('gpu-count-hero'); if(gch) gch.textContent=R.n+(R.n===1?' GPU':' GPUs');
+  var avh = document.getElementById('avail-vram-hero'); if(avh) avh.textContent=R.avail.toFixed(0)+' GB available';
+  var uph = document.getElementById('util-pct-hero'); if(uph) uph.textContent=R.pct+'% utilised';
+
+  // Per-model breakdown
+  var smr = document.getElementById('stack-model-rows');
+  if (smr) {
+    var maxV = Math.max.apply(null, R.items.map(function(r){ return r.vram||0; })) || 1;
+    var sem2 = document.getElementById('stack-empty-msg'); if(sem2) sem2.style.display='none';
+    smr.innerHTML = R.items.map(function(r, idx){
+      var meta = TYPE_META[r.item.type];
+      var name = r.model ? r.model.name : r.item.modelId;
+      var barW = Math.round(r.vram/maxV*100);
+      var mathId = 'math-row-' + idx;
+      var mathContent = '';
+      if ((r.item.type === 'llm' || r.item.type === 'vlm') && r.model) {
+        var b = r.breakdown;
+        var m = r.model;
+        var precB = PREC[r.item.prec] || 2.0;
+        var p = (m.activeP != null ? m.activeP : m.p) || 8;
+        var raw = b.weights + b.wload + b.kvCache + b.activations + (b.visionOH||0);
+        var wloadLabel = r.item.workload || 'inference';
+        var wloadMult = WLOAD[wloadLabel] || 0;
+        var flashNote = _flashAttn ? ' [Flash Attn ×0.60]' : '';
+        var visionLine = r.item.type==='vlm' && m.visionOH
+          ? 'Vision encoder (' + m.name.split(' ')[0] + ' CLIP/SigLIP):              + ' + m.visionOH.toFixed(1) + ' GB\n'
+          : '';
+        mathContent =
+          'Weights:      ' + p.toFixed(1) + 'B params × ' + precB + ' bytes (' + r.item.prec + ')    = ' + b.weights.toFixed(2) + ' GB\n' +
+          'KV Cache:     ' + m.l + ' layers × ' + m.kv + ' KV heads × ' + m.hd + ' head_dim\n' +
+          '              × 2 × ' + (r.item.ctx||4096).toLocaleString() + ' tokens × ' + (r.item.users||1) + ' users × ' + precB + 'B' + flashNote + '\n' +
+          '              ÷ 1,000,000,000                              = ' + b.kvCache.toFixed(2) + ' GB\n' +
+          'Workload:     ' + p.toFixed(1) + 'B × ' + wloadMult + ' (' + wloadLabel + ')              = ' + b.wload.toFixed(2) + ' GB\n' +
+          'Activations:                                               = ' + b.activations.toFixed(2) + ' GB\n' +
+          visionLine +
+          '─────────────────────────────────────────────────────────\n' +
+          'Raw subtotal:                                              = ' + b.raw.toFixed(2) + ' GB\n' +
+          'Runtime spike (×' + (1 + _spikeBuffer).toFixed(2) + '):                               + ' + b.spike.toFixed(2) + ' GB\n' +
+          'Safety buffer (×1.20):                                    + ' + b.buffer.toFixed(2) + ' GB\n' +
+          '═════════════════════════════════════════════════════════\n' +
+          'Total VRAM:                                                = ' + r.vram.toFixed(2) + ' GB';
+      } else if (r.model) {
+        var b = r.breakdown;
+        var unit = (r.item.type==='stt'||r.item.type==='tts') ? 'streams' : r.item.type==='img' ? 'parallel jobs' : 'instances';
+        var rawNL = b.base * b.instances;
+        mathContent =
+          'Peak VRAM per instance:  ' + b.base.toFixed(2) + ' GB × ' + b.instances + ' ' + unit + '   = ' + rawNL.toFixed(2) + ' GB\n' +
+          'Safety buffer (×1.15):                               + ' + b.buffer.toFixed(2) + ' GB\n' +
+          '═════════════════════════════════════════════════════\n' +
+          'Total VRAM:                                           = ' + r.vram.toFixed(2) + ' GB';
+      }
+      var mathBlock = mathContent
+        ? '<button class="math-toggle" onclick="toggleMath(this,\''+mathId+'\')">Show math ▾</button>'+
+          '<div class="math-block" id="'+mathId+'">'+mathContent+'</div>'
+        : '';
+      var archChip = ((r.item.type==='llm'||r.item.type==='vlm') && r.model && r.model.l)
+        ? '<div class="arch-chip">'+r.model.l+' layers · '+r.model.kv+' KV heads · '+r.model.hd+' head dim'+(r.model.visionOH?' · +'+r.model.visionOH+'GB vision enc':'')+(r.model.activeP?' · MoE':'')+' · '+r.item.prec+'</div>'
+        : '';
+      return '<div>'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">'+
+          '<div style="display:flex;align-items:center;gap:6px">'+
+            '<span class="type-pill" style="background:'+meta.bg+';color:'+meta.color+';font-size:9px;padding:2px 7px">'+meta.label+'</span>'+
+            '<div>'+
+              '<span style="font-size:12px;font-weight:600;color:var(--fg)">'+name+'</span>'+
+              archChip+
+            '</div>'+
+          '</div>'+
+          '<span style="font-size:13px;font-weight:700;color:var(--accent)">'+r.vram.toFixed(1)+' GB</span>'+
+        '</div>'+
+        '<div style="height:4px;border-radius:2px;background:var(--border)">'+
+          '<div style="height:4px;border-radius:2px;background:var(--accent);width:'+barW+'%;transition:width .3s"></div>'+
+        '</div>'+
+        mathBlock+
+      '</div>';
+    }).join('');
+  }
+
+  // Procurement
+  var gn=document.getElementById('gpus-needed'); if(gn) gn.textContent=R.n;
+  var go=document.getElementById('gpus-owned');  if(go) go.textContent=gpusOwned;
+  var gt=document.getElementById('gpus-to-buy'); if(gt) gt.textContent=R.gpusToBuy;
+  var pm=document.getElementById('proc-status-msg');
+  if(pm) {
+    pm.className = 'proc-banner ' + (gpusOwned===0 ? 'none' : R.gpusToBuy===0 ? 'good' : 'warn');
+    pm.textContent = gpusOwned===0 ? '— Enter inventory count' :
+      R.gpusToBuy===0 && R.gpusSurplus>0 ? '✓ You\'re covered + '+R.gpusSurplus+' surplus' :
+      R.gpusToBuy===0 ? '✓ Exactly covered' : '⚠ You need '+R.gpusToBuy+' more';
+  }
+  var up=document.getElementById('gpu-unit-price'); if(up) up.textContent=R.unitPrice?'$'+R.unitPrice.toLocaleString():'—';
+  var ce=document.getElementById('gpu-cost-est');   if(ce) ce.textContent=R.gpuCostEst?'~$'+Math.round(R.gpuCostEst/1000)+'K':'—';
+  var dt=document.getElementById('deploy-timeline'); if(dt) dt.textContent=R.timelineText;
+  var ri=document.getElementById('rack-info');       if(ri) ri.textContent=R.rackInfo;
+
+  // System
+  var sp=document.getElementById('srv-power');    if(sp) sp.textContent=R.powerW.toLocaleString()+' W';
+  var sr=document.getElementById('srv-cpu-ram');  if(sr) sr.textContent=R.cpuRam+' GB';
+  var sc2=document.getElementById('srv-cpu-cores');if(sc2)sc2.textContent=R.cpuCores;
+  var snet=document.getElementById('srv-network');  if(snet) snet.textContent=R.networkReq||'—';
+  var srk=document.getElementById('srv-rack');      if(srk)  srk.textContent=R.rackUnits||'—';
+  var scool=document.getElementById('srv-cooling'); if(scool)scool.textContent=R.coolingNote||'—';
+  var sbtu=document.getElementById('srv-btu');      if(sbtu) sbtu.textContent=R.coolingBTU?(R.coolingBTU.toLocaleString()+' BTU/hr'):'—';
+  var spsu=document.getElementById('srv-psu');      if(spsu) spsu.textContent=R.psuNote||'—';
+  var sos=document.getElementById('srv-os');        if(sos)  sos.textContent=R.cudaReq||'—';
+
+  // Storage
+  var md=document.getElementById('model-disk'); if(md) md.textContent=fmtStor(R.modelDiskGB);
+  var ls=document.getElementById('log-stor');   if(ls) ls.textContent=fmtStor(R.logGB);
+  var vs=document.getElementById('vdb-stor');   if(vs) vs.textContent=fmtStor(R.vdbGB);
+  var ts=document.getElementById('total-stor'); if(ts) ts.textContent=fmtStor(R.totalStorGB);
+
+  // Warnings
+  setWarn('warn-multi',  R.wMulti);
+  setWarn('warn-nvlink', R.wNvLink);
+  setWarn('warn-power',  R.wPower);
+  setWarn('warn-scale',  R.wScale);
+  var gpuKey4Warn = document.getElementById('gpu-sel') ? document.getElementById('gpu-sel').value : '';
+  setWarn('warn-bis', _region==='uae' && (GPU_TIER[gpuKey4Warn]==='high'||GPU_TIER[gpuKey4Warn]==='top') && R.gpusToBuy>0);
+
+  // VRAM breakdown (first LLM in stack)
+  var llmRow = R.items.find(function(r){ return r.item.type==='llm' && r.model; });
+  var vbb = document.getElementById('vram-breakdown-body');
+  if (vbb && llmRow) {
+    var b = llmRow.breakdown;
+    vbb.innerHTML =
+      '<tr><td style="color:var(--text-dim);padding:5px 0;border-bottom:1px solid var(--border)">Model Weights</td><td style="font-family:monospace;text-align:right;padding:5px 0;border-bottom:1px solid var(--border)">'+b.weights.toFixed(2)+' GB</td></tr>'+
+      '<tr><td style="color:var(--text-dim);padding:5px 0;border-bottom:1px solid var(--border)">KV Cache</td><td style="font-family:monospace;text-align:right;padding:5px 0;border-bottom:1px solid var(--border)">'+b.kvCache.toFixed(2)+' GB</td></tr>'+
+      '<tr><td style="color:var(--text-dim);padding:5px 0;border-bottom:1px solid var(--border)">Workload Overhead</td><td style="font-family:monospace;text-align:right;padding:5px 0;border-bottom:1px solid var(--border)">'+b.wload.toFixed(2)+' GB</td></tr>'+
+      '<tr><td style="color:var(--text-dim);padding:5px 0;border-bottom:1px solid var(--border)">Activations</td><td style="font-family:monospace;text-align:right;padding:5px 0;border-bottom:1px solid var(--border)">'+b.activations.toFixed(2)+' GB</td></tr>'+
+      '<tr><td style="color:var(--text-dim);padding:5px 0;border-bottom:1px solid var(--border)">Runtime Spike ('+((_spikeBuffer)*100).toFixed(0)+'%)</td><td style="font-family:monospace;text-align:right;padding:5px 0;border-bottom:1px solid var(--border)">'+((b.spike||0).toFixed(2))+' GB</td></tr>'+
+      '<tr><td style="color:var(--text-dim);padding:5px 0;border-bottom:1px solid var(--border)">Safety Buffer (20%)</td><td style="font-family:monospace;text-align:right;padding:5px 0;border-bottom:1px solid var(--border)">'+b.buffer.toFixed(2)+' GB</td></tr>'+
+      '<tr><td style="color:var(--text-dim);padding:5px 0;border-bottom:1px solid var(--border)">CUDA Overhead / GPU</td><td style="font-family:monospace;text-align:right;padding:5px 0;border-bottom:1px solid var(--border)">'+_cudaOverhead.toFixed(1)+' GB × '+R.n+' GPUs</td></tr>'+
+      '<tr><td style="color:var(--text-dim);padding:5px 0;border-bottom:1px solid var(--border)">Serving Framework ('+(_servingFW.toUpperCase())+')</td><td style="font-family:monospace;text-align:right;padding:5px 0;border-bottom:1px solid var(--border)">'+R.servingOH.toFixed(1)+' GB × '+R.n+' GPUs</td></tr>'+
+      '<tr style="font-weight:700"><td style="color:var(--accent-lit);padding:5px 0">'+llmRow.model.name+' Subtotal</td><td style="font-family:monospace;text-align:right;color:var(--accent-lit);padding:5px 0">'+llmRow.vram.toFixed(2)+' GB</td></tr>';
+  } else if (vbb && !llmRow) {
+    vbb.innerHTML='<tr><td style="color:var(--text-dim);padding:5px 0" colspan="2">Add an LLM to the stack to see breakdown.</td></tr>';
+  }
+
+  // Confidence Interval card
+  var ciCard = document.getElementById('card-ci');
+  if (ciCard && R.ci) {
+    ciCard.style.display = '';
+    var gpusOwnedV = gpusOwned;
+    var fmtCICost = function(gpuN) {
+      if (!R.unitPrice) return '';
+      var toBuy = Math.max(0, gpuN - gpusOwnedV);
+      if (toBuy === 0) return '✓ In stock';
+      return '~$' + Math.round(R.unitPrice * toBuy / 1000) + 'K';
+    };
+    var el = function(id){ return document.getElementById(id); };
+    var sfx = function(n){ return n === 1 ? ' GPU' : ' GPUs'; };
+    if (el('ci-opt-n'))  el('ci-opt-n').textContent  = R.ci.optimistic.n   + sfx(R.ci.optimistic.n);
+    if (el('ci-base-n')) el('ci-base-n').textContent = R.ci.baseline.n     + sfx(R.ci.baseline.n);
+    if (el('ci-cons-n')) el('ci-cons-n').textContent = R.ci.conservative.n + sfx(R.ci.conservative.n);
+    if (el('ci-opt-cost'))  el('ci-opt-cost').textContent  = fmtCICost(R.ci.optimistic.n);
+    if (el('ci-base-cost')) el('ci-base-cost').textContent = fmtCICost(R.ci.baseline.n);
+    if (el('ci-cons-cost')) el('ci-cons-cost').textContent = fmtCICost(R.ci.conservative.n);
+  }
+
+  // Interpretation card
+  renderInterpretation(R);
+
+  // Route to guided results panel when in guided mode
+  if (_mode === 'guided') { renderGuidedResults(R); }
+}
+
+function renderInterpretation(R) {
+  var card = document.getElementById('card-interp');
+  var body = document.getElementById('interp-body');
+  if (!card || !body || !R || !R.items || !R.items.length) {
+    if (card) card.style.display = 'none';
+    return;
+  }
+  card.style.display = '';
+  var llmItems = R.items.filter(function(r){ return r.item.type==='llm' && r.model; });
+  var gpuEl    = document.getElementById('gpu-sel');
+  var gpuName  = gpuEl ? gpuEl.options[gpuEl.selectedIndex].text.split('(')[0].trim() : 'selected GPU';
+  var paras    = [];
+
+  var reason = R.n === 1
+    ? 'your entire stack fits on a single GPU'
+    : R.n + ' GPUs are required because the combined VRAM demand exceeds a single card';
+  paras.push('With your current configuration, <span class="interp-hi">' + reason + '</span>. ' +
+    'Effective VRAM needed: <span class="interp-num">' + R.totalVRAM.toFixed(1) + ' GB</span> ' +
+    '(model weights + KV cache + framework overhead + spike buffer) versus ' +
+    '<span class="interp-num">' + R.avail.toFixed(0) + ' GB</span> available across ' +
+    R.n + ' × ' + gpuName + '.');
+
+  if (llmItems.length) {
+    var biggest = llmItems.reduce(function(a,b){ return a.vram>b.vram?a:b; });
+    var bd = biggest.breakdown;
+    var pctW = R.totalVRAM > 0 ? Math.round((bd.weights||0)/R.totalVRAM*100) : 0;
+    var pctK = R.totalVRAM > 0 ? Math.round((bd.kvCache||0)/R.totalVRAM*100) : 0;
+    paras.push('<span class="interp-hi">' + biggest.model.name + '</span> is the dominant consumer: ' +
+      '<span class="interp-num">' + (bd.weights||0).toFixed(1) + ' GB</span> in weights (' + pctW + '% of total) ' +
+      'and <span class="interp-num">' + (bd.kvCache||0).toFixed(1) + ' GB</span> in KV cache (' + pctK + '%). ' +
+      'The KV cache scales with <span class="interp-hi">context length × concurrent users</span>: ' +
+      'at ' + (biggest.item.ctx||4096).toLocaleString() + ' tokens × ' + (biggest.item.users||1) + ' users ' +
+      (_flashAttn ? 'with Flash Attention reducing peak by 40%, ' : 'without Flash Attention, ') +
+      'it consumes ' + (bd.kvCache||0).toFixed(1) + ' GB.');
+  }
+
+  var ohGB = R.perGPUFixed > 0 ? (R.perGPUFixed * R.n).toFixed(1) : '0';
+  if (R.perGPUFixed > 0) {
+    paras.push('System overhead adds <span class="interp-num">' + ohGB + ' GB</span> total: ' +
+      '<span class="interp-hi">CUDA runtime</span> takes ' + _cudaOverhead.toFixed(1) + ' GB per GPU (driver state, CUDA context, memory allocator), ' +
+      'and <span class="interp-hi">' + (_servingFW === 'none' ? 'no serving framework' : _servingFW.toUpperCase()) + '</span>' +
+      (R.servingOH > 0 ? ' adds ' + R.servingOH.toFixed(1) + ' GB for request batching, KV cache management, and scheduling' : '') + '.');
+  }
+
+  if (R.ci) {
+    var spread = R.ci.conservative.n - R.ci.optimistic.n;
+    paras.push('The <span class="interp-hi">confidence range is ' +
+      R.ci.optimistic.n + '–' + R.ci.conservative.n + ' GPUs</span> (' + (spread > 0 ? spread + '-card spread' : 'tight range') + '). ' +
+      'P25 assumes Flash Attention and steady load. P90 assumes peak traffic, full overhead, and N+1 failover spare. ' +
+      'We recommend provisioning <span class="interp-num">' + R.ci.baseline.n + ' GPUs</span> and budgeting a path to <span class="interp-num">' + R.ci.conservative.n + '</span>.');
+  }
+
+  var healthMsg = R.pct < 60 ? 'comfortably under-utilised — good headroom for growth'
+    : R.pct < 80 ? 'healthy — comfortable for production workloads'
+    : R.pct < 90 ? 'high — consider adding one GPU for headroom before production'
+    : 'critical — add capacity now to avoid OOM errors at peak';
+  paras.push('At <span class="interp-num">' + R.pct + '%</span> VRAM utilisation, your cluster is ' + healthMsg + '.');
+
+  body.innerHTML = paras.map(function(p){ return '<p class="interp-para">' + p + '</p>'; }).join('');
+}
+
+function openPrintDoc(type) {
+  if (!_lastR) { alert('Run a calculation first by adding models to the stack.'); return; }
+  var now = new Date();
+  var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var dateStr = months[now.getMonth()] + ' ' + now.getDate() + ', ' + now.getFullYear();
+  var gpuEl   = document.getElementById('gpu-sel');
+  var gpuName = gpuEl ? gpuEl.options[gpuEl.selectedIndex].text.split(' —')[0].trim() : 'Selected GPU';
+  var dateEl = document.getElementById('pdf-doc-date');
+  if (dateEl) dateEl.textContent = dateStr;
+  var body = document.getElementById('pdf-doc-body');
+  if (type === 'rfq') {
+    document.getElementById('pdf-doc-title').textContent = 'GPU Infrastructure — Request for Quotation (RFQ)';
+    document.getElementById('pdf-doc-subtitle').textContent = 'On-Premises AI Infrastructure Hardware Procurement';
+    document.getElementById('pdf-doc-meta').textContent = 'Prepared: ' + dateStr + '  ·  Confidential — For Vendor Distribution';
+    if (body) body.innerHTML = buildRFQBody(_lastR, gpuName);
+  } else {
+    document.getElementById('pdf-doc-title').textContent = 'GPU Infrastructure — Request for Proposal (RFP)';
+    document.getElementById('pdf-doc-subtitle').textContent = 'On-Premises AI Infrastructure — Competitive Vendor Evaluation';
+    document.getElementById('pdf-doc-meta').textContent = 'Issue Date: ' + dateStr + '  ·  Proposal Deadline: 30 calendar days from issue';
+    if (body) body.innerHTML = buildRFPBody(_lastR, gpuName);
+  }
+  window.print();
+}
+
+function buildRFQBody(R, gpuName) {
+  var stackRows = R.items.filter(function(r){ return r.model; }).map(function(r){
+    var b = r.breakdown;
+    var detail = r.item.type === 'llm'
+      ? r.item.prec.toUpperCase() + ', ' + (r.item.ctx||4096).toLocaleString() + ' ctx, ' + (r.item.users||1) + ' users'
+      : (r.item.streams||r.item.jobs||r.item.batchSize||1) + (r.item.type==='img' ? ' parallel jobs' : ' streams');
+    return '<div class="pdf-row"><span class="pdf-rl">' + r.model.name +
+      ' <span style="color:#888;font-size:10px">(' + (r.item.type||'').toUpperCase() + ' · ' + detail + ')</span></span>' +
+      '<span class="pdf-rv">' + r.vram.toFixed(1) + ' GB</span></div>';
+  }).join('');
+
+  var ciSection = R.ci ? (
+    '<div class="pdf-ci-grid">' +
+    '<div class="pdf-ci-col"><div class="pdf-ci-label">Optimistic (P25)</div><div class="pdf-ci-n">' + R.ci.optimistic.n + '</div><div class="pdf-ci-desc">' + R.ci.optimistic.desc + '</div></div>' +
+    '<div class="pdf-ci-col pdf-base"><div class="pdf-ci-label">Baseline (P50)</div><div class="pdf-ci-n">' + R.ci.baseline.n + '</div><div class="pdf-ci-desc">' + R.ci.baseline.desc + '</div></div>' +
+    '<div class="pdf-ci-col"><div class="pdf-ci-label">Conservative (P90)</div><div class="pdf-ci-n">' + R.ci.conservative.n + '</div><div class="pdf-ci-desc">' + R.ci.conservative.desc + '</div></div>' +
+    '</div>') : '';
+
+  var costLine = R.gpuCostEst
+    ? '$' + Math.round(R.gpuCostEst * 0.9 / 1000) * 1000 .toLocaleString() + ' – $' + Math.round(R.gpuCostEst * 1.15 / 1000) * 1000 .toLocaleString() + ' (estimated, excl. installation)'
+    : 'Request vendor quote';
+
+  return '<div class="pdf-section">' +
+    '<div class="pdf-sec-title">1. Executive Summary</div>' +
+    '<div class="pdf-hl"><div class="pdf-hl-title">Procurement Requirement</div>' +
+    '<div class="pdf-hl-text">We require <strong>' + R.n + ' × ' + gpuName + '</strong> to support on-premises AI workloads. ' +
+    'Total effective VRAM: <strong>' + R.totalVRAM.toFixed(1) + ' GB</strong>. ' +
+    'Estimated procurement: <strong>' + R.timelineText + '</strong>. Budget estimate: <strong>' + costLine + '</strong>.</div></div></div>' +
+
+    '<div class="pdf-section"><div class="pdf-sec-title">2. AI Workload Stack</div>' + stackRows + '</div>' +
+
+    '<div class="pdf-section"><div class="pdf-sec-title">3. GPU Count — Confidence Interval</div>' + ciSection + '</div>' +
+
+    '<div class="pdf-section"><div class="pdf-sec-title">4. Hardware Specification</div>' +
+    '<div class="pdf-row"><span class="pdf-rl">GPU Model</span><span class="pdf-rv">' + gpuName + '</span></div>' +
+    '<div class="pdf-row"><span class="pdf-rl">Quantity — Baseline</span><span class="pdf-rv">' + R.n + ' units</span></div>' +
+    '<div class="pdf-row"><span class="pdf-rl">Quantity — Conservative (Recommended)</span><span class="pdf-rv">' + (R.ci ? R.ci.conservative.n : R.n) + ' units</span></div>' +
+    '<div class="pdf-row"><span class="pdf-rl">Total VRAM (effective)</span><span class="pdf-rv">' + R.totalVRAM.toFixed(1) + ' GB</span></div>' +
+    '<div class="pdf-row"><span class="pdf-rl">Peak Power Draw</span><span class="pdf-rv">' + (R.powerW/1000).toFixed(1) + ' kW</span></div>' +
+    '<div class="pdf-row"><span class="pdf-rl">Min. CPU System RAM</span><span class="pdf-rv">' + R.cpuRam + ' GB</span></div>' +
+    '<div class="pdf-row"><span class="pdf-rl">Min. CPU Cores</span><span class="pdf-rv">' + R.cpuCores + ' cores</span></div>' +
+    '<div class="pdf-row"><span class="pdf-rl">Storage Required</span><span class="pdf-rv">' + R.totalStorGB.toFixed(1) + ' GB</span></div>' +
+    '<div class="pdf-row"><span class="pdf-rl">GPU Interconnect</span><span class="pdf-rv">' + (R.n > 1 ? 'NVLink / NVSwitch required' : 'Single GPU — no interconnect needed') + '</span></div>' +
+    '</div>' +
+
+    '<div class="pdf-section"><div class="pdf-sec-title">5. Vendor Requirements</div>' +
+    '<div class="pdf-row"><span class="pdf-rl">Warranty</span><span class="pdf-rv">3-year on-site next-business-day</span></div>' +
+    '<div class="pdf-row"><span class="pdf-rl">Support SLA</span><span class="pdf-rv">24×7 · 4-hour on-site response</span></div>' +
+    '<div class="pdf-row"><span class="pdf-rl">Delivery</span><span class="pdf-rv">Racked, cabled, burn-in tested · ' + R.timelineText + '</span></div>' +
+    '<div class="pdf-row"><span class="pdf-rl">Acceptance Criteria</span><span class="pdf-rv">VRAM stress test (72h) · peer-to-peer bandwidth verification</span></div>' +
+    '</div>' +
+
+    '<div class="pdf-section"><div class="pdf-sec-title">6. Notes</div>' +
+    '<div style="font-size:11px;color:#555;line-height:1.8">' +
+    '• All AI models run fully on-premises — no data leaves the organisation\'s network.<br>' +
+    '• VRAM calculated using production formula: weights + KV cache' + (R.flashAttn ? ' (Flash Attention −40%)' : '') + ' + serving framework overhead (' + (R.servingFW||'none').toUpperCase() + ') + CUDA runtime (' + _cudaOverhead + ' GB/GPU) + ' + Math.round(_spikeBuffer*100) + '% spike buffer + 20% safety margin.<br>' +
+    '• Confidence interval: ' + (R.ci ? R.ci.optimistic.n + '–' + R.ci.conservative.n + ' GPUs' : R.n + ' GPUs') + ' depending on load profile and HA requirements.<br>' +
+    '• Prices are estimated market rates. Request formal vendor quote for binding pricing.' +
+    '</div></div>';
+}
+
+function buildRFPBody(R, gpuName) {
+  var criteria = [
+    'GPU Model: ' + gpuName + ' or equivalent with ≥' + Math.ceil(R.avail / R.n) + ' GB VRAM per card',
+    'Quantity: ' + R.n + ' GPUs minimum; ' + (R.ci ? R.ci.conservative.n : R.n) + ' preferred for production high-availability',
+    'GPU Interconnect: NVLink' + (R.n > 2 ? ' / NVSwitch' : ' bridge') + ' for multi-GPU configurations',
+    'System Memory: Minimum ' + R.cpuRam + ' GB DDR5 ECC RAM',
+    'CPU: Minimum ' + R.cpuCores + ' cores (AMD EPYC or Intel Xeon Scalable)',
+    'Storage: ' + R.totalStorGB.toFixed(0) + ' GB NVMe SSD for model storage; additional spinning disk for logs',
+    'Power Supply: ' + (R.powerW/1000).toFixed(1) + ' kW per node; PDU with remote monitoring',
+    'Networking: 25 GbE minimum per node; 100 GbE preferred for multi-node',
+    'OS: Ubuntu 22.04 LTS with CUDA 12.x drivers pre-installed',
+    'Warranty: 3-year on-site next-business-day hardware replacement',
+    'Support: 24×7 remote monitoring; 4-hour on-site response SLA',
+    'Acceptance Test: 72-hour burn-in, peer-to-peer bandwidth test, VRAM ECC verification',
+    'Delivery: Racked, cabled, and commissioned — ' + R.timelineText,
+    'Documentation: Architecture diagram, BIOS/firmware versions, cable labelling scheme',
+  ];
+
+  var ciSection = R.ci ? (
+    '<div class="pdf-ci-grid">' +
+    '<div class="pdf-ci-col"><div class="pdf-ci-label">Minimum (P25)</div><div class="pdf-ci-n">' + R.ci.optimistic.n + '</div><div class="pdf-ci-desc">Pilot / light load</div></div>' +
+    '<div class="pdf-ci-col pdf-base"><div class="pdf-ci-label">Target (P50)</div><div class="pdf-ci-n">' + R.ci.baseline.n + '</div><div class="pdf-ci-desc">Standard production</div></div>' +
+    '<div class="pdf-ci-col"><div class="pdf-ci-label">Preferred (P90)</div><div class="pdf-ci-n">' + R.ci.conservative.n + '</div><div class="pdf-ci-desc">N+1 HA, peak headroom</div></div>' +
+    '</div><p style="font-size:10px;color:#888;margin-top:6px">Vendors must quote for all three configurations.</p>') : '';
+
+  return '<div class="pdf-section"><div class="pdf-sec-title">1. Background & Objective</div>' +
+    '<p style="font-size:12px;color:#333;line-height:1.7">We are seeking proposals from qualified vendors to supply, install, and commission on-premises GPU infrastructure for AI workloads. ' +
+    'The system must deliver a peak VRAM capacity of <strong>' + R.totalVRAM.toFixed(1) + ' GB</strong> across ' + R.n + ' GPUs, operating entirely within our data centre with no external data transfer.</p></div>' +
+
+    '<div class="pdf-section"><div class="pdf-sec-title">2. Technical Requirements</div>' +
+    criteria.map(function(c,i){
+      return '<div class="pdf-rfp-item"><span class="pdf-rfp-num">' + (i+1) + '.</span><span class="pdf-rfp-text">' + c + '</span></div>';
+    }).join('') + '</div>' +
+
+    '<div class="pdf-section"><div class="pdf-sec-title">3. Configuration Options</div>' + ciSection + '</div>' +
+
+    '<div class="pdf-section"><div class="pdf-sec-title">4. Evaluation Criteria</div>' +
+    '<div class="pdf-rfp-item"><span class="pdf-rfp-num">40%</span><span class="pdf-rfp-text"><strong>Total Cost of Ownership</strong> — hardware, installation, 3-year support bundle</span></div>' +
+    '<div class="pdf-rfp-item"><span class="pdf-rfp-num">25%</span><span class="pdf-rfp-text"><strong>Technical Specification</strong> — VRAM per GPU, interconnect bandwidth, power efficiency (perf/W)</span></div>' +
+    '<div class="pdf-rfp-item"><span class="pdf-rfp-num">20%</span><span class="pdf-rfp-text"><strong>Delivery & Timeline</strong> — confirmed lead time, on-site installation capability, commissioning</span></div>' +
+    '<div class="pdf-rfp-item"><span class="pdf-rfp-num">15%</span><span class="pdf-rfp-text"><strong>Support & Warranty</strong> — SLA terms, local support presence, escalation process, reference customers</span></div>' +
+    '</div>' +
+
+    '<div class="pdf-section"><div class="pdf-sec-title">5. Submission Instructions</div>' +
+    '<p style="font-size:12px;color:#333;line-height:1.7">Proposals must include: itemised bill of materials, delivery schedule, sample acceptance test procedure, and two reference customers for comparable AI GPU deployments. ' +
+    'Proposals are due within 30 calendar days of this document\'s issue date.</p></div>';
+}
+
+/* ═══════════════════════════════════════
+   EVENT WIRING
+═══════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', function() {
+  // Restore theme preference
+  try { _theme = localStorage.getItem('gpu_calc_theme') || 'dark'; } catch(e){}
+  if (_theme === 'light') {
+    document.body.classList.add('light');
+    var tb = document.getElementById('btn-theme'); if (tb) tb.textContent = '☽';
+  }
+
+  // Restore mode preference (default to guided)
+  var savedMode = 'guided';
+  try { savedMode = localStorage.getItem('gpu_calc_mode') || 'guided'; } catch(e){}
+  setMode(savedMode);
+
+  // Sync guided GPU select to match initial expert GPU selection
+  var initGPU = document.getElementById('gpu-sel');
+  var guidedGPUSel = document.getElementById('guided-gpu-sel');
+  if (initGPU && guidedGPUSel) {
+    // Try to match the default expert GPU to guided options
+    var expertVal = initGPU.value;
+    var found = false;
+    for (var opt = 0; opt < guidedGPUSel.options.length; opt++) {
+      if (guidedGPUSel.options[opt].value === expertVal) {
+        guidedGPUSel.value = expertVal;
+        found = true;
+        break;
+      }
+    }
+    if (!found) guidedGPUSel.value = 'a100-80';
+  }
+
+  // Wire hardware/data inputs
+  document.getElementById('gpu-sel').addEventListener('change', function() {
+    // Keep guided GPU select in sync
+    var gs = document.getElementById('guided-gpu-sel');
+    if (gs) {
+      for (var o = 0; o < gs.options.length; o++) {
+        if (gs.options[o].value === this.value) { gs.value = this.value; break; }
+      }
+    }
+    document.getElementById('custom-vram-wrap').classList.toggle('on', this.value==='custom');
+    recalc();
+  });
+  document.getElementById('custom-vram').addEventListener('input', recalc);
+  document.getElementById('gpu-inventory').addEventListener('input', recalc);
+  document.getElementById('qpd-input').addEventListener('input', recalc);
+  document.getElementById('retention-input').addEventListener('change', recalc);
+  document.getElementById('docs-input').addEventListener('input', recalc);
+
+});
+
+/* ═══════════════════════════════════════
+   VENDOR RFQ EXPORT
+═══════════════════════════════════════ */
+function copyRFQ() {
+  if (stack.length === 0) { alert('Add models to the stack first, then copy the RFQ.'); return; }
+
+  var gpuKey   = (document.getElementById('gpu-sel')||{}).value || 'a100-80';
+  var gvram    = GVRAM[gpuKey] || parseFloat((document.getElementById('custom-vram')||{}).value) || 80;
+  var gtdp     = GTDP[gpuKey] || null;
+  var gpusOwned= parseInt((document.getElementById('gpu-inventory')||{}).value, 10) || 0;
+  var qpd      = parseInt((document.getElementById('qpd-input')||{}).value, 10) || 0;
+  var retention= parseInt((document.getElementById('retention-input')||{}).value, 10) || 30;
+  var numDocs  = parseInt((document.getElementById('docs-input')||{}).value, 10) || 0;
+  var R        = calcStack(stack, gvram, gtdp, gpusOwned, qpd, retention, numDocs);
+
+  var gpuLabel  = GLABEL[gpuKey] || ('Custom ' + gvram + ' GB');
+  var unitP     = GPRICE[gpuKey];
+  var totalCost = R.gpuCostEst ? fmtUSD(R.gpuCostEst) : 'Request vendor quote';
+  var today     = new Date().toLocaleDateString('en-US', {year:'numeric',month:'long',day:'numeric'});
+
+  var stackDesc = stack.map(function(item){
+    var models = MODEL_LIBRARY[item.type]||[];
+    var model  = models.find(function(m){ return m.id===item.modelId; });
+    var name   = model ? model.name : item.modelId;
+    var meta   = TYPE_META[item.type];
+    var detail = item.type==='llm'
+      ? '('+(item.prec||'fp16').toUpperCase()+', '+(item.workload||'inference')+', '+(item.ctx||4096).toLocaleString()+' ctx, '+(item.users||1)+' users)'
+      : (item.type==='stt'||item.type==='tts')
+      ? '('+(item.streams||1)+' concurrent streams)'
+      : item.type==='img'
+      ? '('+(item.jobs||1)+' parallel jobs)'
+      : '('+(item.batchSize||1)+' instance'+(item.batchSize>1?'s':'')+')';
+    return '  • ['+meta.label+'] '+name+' '+detail;
+  }).join('\n');
+
+  var warnings = [];
+  if (R.wMulti)  warnings.push('Multi-GPU tensor parallelism required (vLLM / DeepSpeed / HF Accelerate)');
+  if (R.wNvLink) warnings.push('NVLink / NVSwitch interconnect required — PCIe insufficient at '+R.n+' GPUs');
+  if (R.wPower)  warnings.push('Dedicated 220V–240V circuits + UPS required ('+R.powerW.toLocaleString()+' W peak draw)');
+  if (R.wScale)  warnings.push('Workload exceeds single 8-GPU node — multi-node cluster may be required');
+
+  var lines = [
+    '══════════════════════════════════════════════════════',
+    '  ON-PREMISES AI INFRASTRUCTURE — VENDOR RFQ SUMMARY ',
+    '══════════════════════════════════════════════════════',
+    'Generated: ' + today,
+    '',
+    '── AI MODEL STACK ─────────────────────────────────────',
+    stackDesc,
+    '',
+    '── GPU COMPUTE REQUIREMENTS ───────────────────────────',
+    'GPU Model:          ' + gpuLabel,
+    'VRAM per GPU:       ' + gvram + ' GB',
+    'Quantity Required:  ' + R.n + '× units',
+    'Total VRAM Required:' + R.totalVRAM.toFixed(1) + ' GB (incl. 20% OOM safety buffer)',
+    'VRAM Available:     ' + R.avail.toFixed(0) + ' GB (' + R.n + '× ' + gvram + ' GB)',
+    'Utilisation:        ' + R.pct + '%',
+    '',
+    '── PROCUREMENT ────────────────────────────────────────',
+    'Units in Inventory: ' + gpusOwned + '×',
+    'Units to Purchase:  ' + R.gpusToBuy + '×',
+    'Est. Unit Price:    ' + (unitP !== null ? fmtUSD(unitP) + ' (estimated market price)' : 'Request vendor quote'),
+    'Est. Total GPU Cost:' + totalCost,
+    'Est. Timeline:      ' + R.timelineText,
+    'Rack Form Factor:   ' + R.rackInfo,
+    '',
+    '── SERVER SYSTEM REQUIREMENTS ─────────────────────────',
+    'Est. Peak Power:    ' + R.powerW.toLocaleString() + ' W (TDP)',
+    'Min. CPU RAM:       ' + R.cpuRam + ' GB system memory',
+    'Min. CPU Cores:     ' + R.cpuCores + ' cores',
+    '',
+    '── STORAGE REQUIREMENTS ───────────────────────────────',
+    'Model Files (disk): ' + fmtStor(R.modelDiskGB),
+  ];
+
+  if (qpd > 0) {
+    lines.push('Inference Logs:     ' + fmtStor(R.logGB) + ' (' + qpd.toLocaleString() + ' req/day × ' + retention + ' days)');
+  }
+  if (numDocs > 0) {
+    lines.push('Vector DB / RAG:    ' + fmtStor(R.vdbGB) + ' (' + numDocs.toLocaleString() + ' documents)');
+  }
+  lines.push('Total Storage:      ' + fmtStor(R.totalStorGB) + ' minimum');
+
+  if (warnings.length > 0) {
+    lines.push('');
+    lines.push('── TECHNICAL REQUIREMENTS FOR VENDOR ──────────────────');
+    warnings.forEach(function(w, i) { lines.push((i+1) + '. ' + w); });
+  }
+
+  lines.push('');
+  lines.push('── DISCLAIMER ─────────────────────────────────────────');
+  lines.push('All figures are planning estimates based on published industry');
+  lines.push('benchmarks. Actual requirements may vary by model architecture,');
+  lines.push('serving framework, and usage patterns. Request formal vendor');
+  lines.push('quotation for final pricing, lead times, and support contracts.');
+  lines.push('');
+  lines.push('Generated by: On-Premises GPU Requirements Calculator');
+  lines.push('══════════════════════════════════════════════════════');
+
+  var text = lines.join('\n');
+
+  navigator.clipboard.writeText(text).then(function() {
+    var btn = document.getElementById('btn-rfq');
+    btn.textContent = '✓ Copied to Clipboard!';
+    btn.classList.add('copied');
+    setTimeout(function() {
+      btn.textContent = 'Copy Vendor RFQ';
+      btn.classList.remove('copied');
+    }, 2500);
+  }).catch(function() {
+    var ta = document.createElement('textarea');
+    ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    var btn = document.getElementById('btn-rfq');
+    btn.textContent = '✓ Copied!';
+    setTimeout(function() { btn.textContent = 'Copy Vendor RFQ'; }, 2000);
+  });
+}
+
+/* ═══════════════════════════════════════
+   GLOSSARY
+═══════════════════════════════════════ */
+var GLOSSARY = [
+  {term:'VRAM',def:'Video RAM — the dedicated memory on a GPU chip. All model weights, KV cache, and runtime buffers must fit here simultaneously. VRAM is the primary constraint for on-prem AI deployment.'},
+  {term:'KV Cache',def:'Key-Value Cache — stores intermediate attention computations during text generation. Grows linearly with context length × concurrent users. Cleared after each request.'},
+  {term:'Flash Attention',def:'An optimised attention algorithm that tiles computation to avoid writing the full attention matrix to VRAM. Reduces KV cache peak memory by ~40% with identical model outputs.'},
+  {term:'Quantisation (INT8 / INT4)',def:'Reducing model weight precision from 32-bit floats to 8-bit or 4-bit integers. INT8 halves VRAM vs FP16 with ~1% quality loss. INT4 uses ¼ the VRAM with a moderate quality trade-off.'},
+  {term:'FP16 / BF16',def:'16-bit floating point formats. Both use 2 bytes per parameter. BF16 (Brain Float) has better numerical stability for training. FP16 is standard for inference on older GPUs.'},
+  {term:'FP32',def:'32-bit full precision — 4 bytes per parameter. Used for full fine-tuning. Doubles VRAM vs FP16 and is rarely needed for inference.'},
+  {term:'TDP (Thermal Design Power)',def:'Maximum sustained power a GPU draws under full load, in watts. Critical for data centre power budget, UPS sizing, and cooling design.'},
+  {term:'NVLink',def:'NVIDIA\'s high-bandwidth GPU interconnect. Required when a model is split across multiple GPUs. Standard PCIe bandwidth is insufficient for tight model parallelism.'},
+  {term:'NVSwitch',def:'NVIDIA\'s all-to-all interconnect fabric for clusters of 8+ GPUs. Used in DGX H100 and HGX H200. Delivers up to 900 GB/s bandwidth across all GPUs in a node.'},
+  {term:'Tensor Parallelism',def:'Splitting model weight matrices across multiple GPUs. Required when a single model doesn\'t fit on one card. Adds 8–15% communication overhead per forward pass.'},
+  {term:'vLLM',def:'Open-source LLM serving engine optimised for high throughput. Uses PagedAttention to manage KV cache efficiently. Adds ~3 GB serving overhead. Recommended for production deployments.'},
+  {term:'TGI (Text Generation Inference)',def:'HuggingFace\'s production LLM serving framework. Optimised for HuggingFace model formats. Adds ~2 GB overhead. Popular alternative to vLLM.'},
+  {term:'Ollama',def:'Lightweight local LLM runner. Easy setup, lower overhead (~1.5 GB). Best for development and single-user deployments — not recommended for high-concurrency production.'},
+  {term:'Context Window',def:'Maximum number of tokens an LLM can process in one request (input + output combined). KV cache memory grows linearly with context window size × concurrent users.'},
+  {term:'Concurrent Users',def:'Number of simultaneous inference requests the system handles. Each active request holds its own KV cache in VRAM for the duration of text generation.'},
+  {term:'GQA (Grouped Query Attention)',def:'Attention architecture where multiple query heads share one key-value head pair. Reduces KV cache size significantly. Used in Llama 3, Qwen2.5, and Mistral.'},
+  {term:'MoE (Mixture of Experts)',def:'Model architecture where only a fraction of parameters are active per token. e.g. Mixtral activates 2 of 8 experts. Active params determine compute; total params determine storage.'},
+  {term:'LoRA Fine-tuning',def:'Low-Rank Adaptation — trains small adapter layers (~1% of params) while keeping the base model frozen. Requires ~0.6× additional VRAM beyond inference.'},
+  {term:'CUDA Overhead',def:'~1.5 GB per GPU consumed by NVIDIA\'s CUDA runtime, driver, and GPU context regardless of workload. This memory is never available for models.'},
+  {term:'High Availability (N+1)',def:'Keeping one spare GPU beyond the minimum required so that if a card fails, the workload continues. Standard practice for any production AI deployment.'},
+  {term:'GPU Utilisation (%)',def:'Fraction of total available VRAM that will be used. Below 70% = comfortable headroom. 70–85% = healthy production. Above 90% = risk of OOM crashes on traffic spikes.'},
+  {term:'OOM (Out of Memory)',def:'When a GPU runs out of VRAM, inference crashes or queues indefinitely. Prevented by leaving headroom above peak utilisation and enabling Flash Attention.'},
+  {term:'BIS Export Control',def:'US Bureau of Industry and Security rules restricting shipment of advanced AI chips (H100, H200) to some countries. UAE is Tier 2 — requires export compliance documentation. Validated End-User (VEU) certification may be needed.'},
+  {term:'HBM (High Bandwidth Memory)',def:'Stacked memory type used in data centre GPUs (H100, A100). H100 provides 3.35 TB/s bandwidth but is physically limited to 80 GB capacity.'},
+  {term:'PCIe vs SXM',def:'Two GPU form factors. PCIe slots into standard server motherboards (lower bandwidth). SXM mounts on a specialised baseboard with NVLink (higher bandwidth, required for multi-GPU model parallelism).'},
+  {term:'Embedding Model',def:'Smaller neural network converting text to dense vectors for semantic search and RAG. Much smaller than LLMs — typically 0.1–0.6 GB VRAM.'},
+  {term:'RAG (Retrieval-Augmented Generation)',def:'Architecture that retrieves relevant documents from a vector DB before generating a response. Requires an embedding model + vector database + LLM running simultaneously.'},
+  {term:'Whisper / STT',def:'Speech-to-Text model by OpenAI. Converts audio to text. Whisper Large-v3 uses ~3 GB base / 5 GB peak VRAM per instance. Multiple concurrent streams multiply this.'},
+  {term:'InfiniBand / NDR',def:'High-speed networking fabric (400 Gb/s per port with NDR) used to connect GPU nodes in clusters. Required when workloads span multiple physical servers.'},
+  {term:'Quantisation (INT4)',def:'4-bit quantisation uses just 0.5 bytes per parameter. Enables fitting very large models (70B+) on fewer GPUs at the cost of some output quality.'},
+];
+function openGlossary(){
+  var ov=document.getElementById('glossary-overlay'),pn=document.getElementById('glossary-panel'),li=document.getElementById('gloss-list');
+  if(!ov||!pn||!li)return;
+  if(!li.children.length){
+    li.innerHTML=GLOSSARY.map(function(g){
+      return '<div class="gloss-item" data-term="'+g.term.toLowerCase()+'" data-def="'+g.def.toLowerCase()+'"><div class="gloss-term">'+g.term+'</div><div class="gloss-def">'+g.def+'</div></div>';
+    }).join('');
+  }
+  ov.classList.add('open'); pn.classList.add('open');
+  var inp=document.getElementById('gloss-search-inp');
+  if(inp){inp.value='';filterGloss('');setTimeout(function(){inp.focus();},300);}
+}
+function closeGlossary(){
+  var ov=document.getElementById('glossary-overlay'),pn=document.getElementById('glossary-panel');
+  if(ov)ov.classList.remove('open'); if(pn)pn.classList.remove('open');
+}
+function filterGloss(q){
+  var items=document.querySelectorAll('#gloss-list .gloss-item'),lq=q.toLowerCase().trim();
+  items.forEach(function(el){
+    var match=!lq||el.getAttribute('data-term').includes(lq)||el.getAttribute('data-def').includes(lq);
+    el.classList.toggle('hidden',!match);
+  });
+}
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeGlossary();});
+
+/* ═══════════════════════════════════════
+   THEME TOGGLE
+═══════════════════════════════════════ */
+var _theme = 'dark';
+function toggleTheme() {
+  _theme = _theme === 'dark' ? 'light' : 'dark';
+  document.body.classList.toggle('light', _theme === 'light');
+  var btn = document.getElementById('btn-theme');
+  if (btn) btn.textContent = _theme === 'light' ? '☽' : '☀';
+  try { localStorage.setItem('gpu_calc_theme', _theme); } catch(e) {}
+}
+</script>
+<div id="glossary-overlay" onclick="closeGlossary()"></div>
+<div id="glossary-panel"><div class="gloss-header"><span class="gloss-title">AI Infrastructure Glossary</span><button class="gloss-close" onclick="closeGlossary()">×</button></div><div class="gloss-search"><input type="text" id="gloss-search-inp" placeholder="Search terms…" oninput="filterGloss(this.value)"></div><div class="gloss-list" id="gloss-list"></div><div class="gloss-footer">Estimates are approximate — actual values vary by hardware and configuration.</div></div>
+</body>
+</html>
