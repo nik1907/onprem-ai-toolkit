@@ -18,6 +18,10 @@ A production-grade tool for calculating GPU, memory, power, and storage requirem
 
 ### Quick Start
 
+**Use it instantly (no download needed):**
+👉 [nik1907.github.io/onprem-ai-toolkit](https://nik1907.github.io/onprem-ai-toolkit/)
+
+**Or download for offline use:**
 1. Download `gpu-calculator.html`
 2. Open it in Chrome, Edge, Firefox, or Safari
 3. No installation, no internet connection, no server required
