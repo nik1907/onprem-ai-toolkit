@@ -224,6 +224,17 @@ More tools will be added to this repository over time.
 
 ---
 
+## Need Help With a Deployment?
+
+The calculator tells you what to buy. Actually procuring, standing up, and running an on-premises AI cluster — selecting vendors, navigating BIS export compliance, configuring vLLM in production, capacity planning — is where most teams get stuck.
+
+If you're planning a serious GPU deployment and want a second opinion or hands-on support, get in touch:
+
+- **Email:** gnikki.reddy@gmail.com
+- **GitHub:** [github.com/nik1907](https://github.com/nik1907)
+
+---
+
 ## Contributing
 
 Issues and pull requests are welcome. Each tool in this repo follows the same principles:

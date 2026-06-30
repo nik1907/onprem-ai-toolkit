@@ -419,6 +419,15 @@
     .btn-gloss{padding:6px 12px;border-radius:var(--r-pill);border:1px solid var(--border-hi);background:transparent;color:var(--text-dim);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:5px;}
     .btn-gloss:hover{border-color:var(--accent);color:var(--accent);}
 
+    /* ─── Footer ─────────────────────────────────────────────── */
+    .app-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;
+      gap:6px;padding:7px 20px;border-top:1px solid var(--border);flex-shrink:0;
+      font-size:10px;color:var(--text-mute);background:var(--bg-panel);}
+    .app-footer a{color:var(--accent);text-decoration:none;}
+    .app-footer a:hover{text-decoration:underline;}
+    .app-footer-cta{color:var(--text-dim);}
+    @media print{.app-footer{display:none!important;}}
+
     /* ─── Responsive Layout ──────────────────────────────────── */
 
     /* iPad landscape: shrink left panel */
@@ -872,6 +881,11 @@
 </div><!-- /#expert-results -->
 </div><!-- /right -->
 </div><!-- /split -->
+
+<footer class="app-footer">
+  <span>On-Premises GPU Requirements Calculator — open source, free to use</span>
+  <span class="app-footer-cta">Planning a deployment? <a href="https://github.com/nik1907/onprem-ai-toolkit" target="_blank" rel="noopener">github.com/nik1907/onprem-ai-toolkit</a> · <a href="mailto:gnikki.reddy@gmail.com">Get in touch</a></span>
+</footer>
 
 <!-- Print / PDF Document (hidden until window.print()) -->
 <div id="print-rfq-doc">
