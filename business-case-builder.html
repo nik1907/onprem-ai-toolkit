@@ -1,0 +1,1090 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Business Case Builder</title>
+  <style>
+    :root {
+      /* Apple-inspired dark palette */
+      --bg-base:#000000;
+      --bg-panel:#0d0d0d;
+      --bg-card:#1c1c1e;
+      --bg-card2:#2c2c2e;
+      --bg-input:#3a3a3c;
+      --border:rgba(255,255,255,0.08);
+      --border-hi:rgba(255,255,255,0.13);
+      /* Text — silver-white */
+      --text-hi:#f5f5f7;
+      --text-mid:#d1d1d6;
+      --text-dim:#a0a0a8;
+      --text-mute:#6e6e73;
+      /* Accent: green */
+      --accent:#30d158;
+      --accent-dim:#25a244;
+      --accent-lit:#4cd964;
+      --accent-tint:rgba(48,209,88,0.08);
+      --accent-glow:rgba(48,209,88,0.22);
+      /* Status */
+      --accent-green:#30d158;
+      --warn-amber:#ff9f0a;
+      --warn-purple:#bf5af2;
+      --warn-red:#ff453a;
+      --warn-blue:#64d2ff;
+      /* Radius — Apple-scale */
+      --r-sm:8px;
+      --r-md:10px;
+      --r-lg:14px;
+      --r-xl:18px;
+      --r-pill:980px;
+      /* Shadows */
+      --shadow-sm:0 2px 8px rgba(0,0,0,0.45);
+      --shadow-md:0 8px 32px rgba(0,0,0,0.55);
+      /* Aliases kept for backward compat */
+      --fg:#c7c7cc;
+      --muted:#6e6e73;
+    }
+    /* Light theme overrides */
+    body.light{
+      --bg-base:#f5f5f7;
+      --bg-panel:#ebebf0;
+      --bg-card:#ffffff;
+      --bg-card2:#f0f0f5;
+      --bg-input:#e5e5ea;
+      --border:rgba(0,0,0,0.08);
+      --border-hi:rgba(0,0,0,0.14);
+      --text-hi:#1d1d1f;
+      --text-mid:#3a3a3c;
+      --text-dim:#6e6e73;
+      --text-mute:#8e8e93;
+      --accent:#1d8a3c;
+      --accent-dim:#166c2e;
+      --accent-lit:#25a244;
+      --accent-tint:rgba(29,138,60,0.08);
+      --accent-glow:rgba(29,138,60,0.18);
+      --accent-green:#1d8a3c;
+      --shadow-sm:0 2px 8px rgba(0,0,0,0.10);
+      --shadow-md:0 8px 32px rgba(0,0,0,0.14);
+      --fg:#3a3a3c;
+      --muted:#8e8e93;
+    }
+    body.light .app-header{background:rgba(245,245,247,0.88);}
+
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--bg-base);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",sans-serif;
+      color:var(--text-mid);font-size:13px;line-height:1.5;height:100vh;overflow:hidden;
+      display:flex;flex-direction:column;}
+
+    /* Header */
+    .app-header{
+      background:rgba(28,28,30,0.85);
+      backdrop-filter:blur(20px);
+      -webkit-backdrop-filter:blur(20px);
+      border-bottom:1px solid var(--border);
+      padding:0 24px;height:56px;
+      display:flex;align-items:center;gap:14px;flex-shrink:0;
+    }
+    .app-logo{width:32px;height:32px;background:linear-gradient(135deg,var(--accent),var(--accent-dim));
+      border-radius:var(--r-md);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;letter-spacing:0.5px;flex-shrink:0;}
+    .app-header h1{font-size:15px;font-weight:700;color:var(--text-hi);white-space:nowrap;letter-spacing:-0.2px;}
+    .app-tagline{font-size:11px;color:var(--text-mute);white-space:nowrap;}
+    .hdr-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+
+    /* Split */
+    .split{display:flex;flex:1;overflow:hidden;}
+
+    /* Left Panel */
+    .left{width:460px;min-width:460px;background:var(--bg-panel);border-right:1px solid var(--border);
+      overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;
+      scrollbar-width:thin;scrollbar-color:var(--border-hi) transparent;}
+    .left::-webkit-scrollbar{width:4px;}
+    .left::-webkit-scrollbar-thumb{background:var(--bg-card2);border-radius:2px;}
+
+    /* Right Panel */
+    .right{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;
+      background:var(--bg-base);min-width:0;scrollbar-width:thin;scrollbar-color:var(--bg-card2) transparent;}
+    .right::-webkit-scrollbar{width:4px;}
+    .right::-webkit-scrollbar-thumb{background:var(--bg-card2);border-radius:2px;}
+
+    /* Section cards */
+    .rcard{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-xl);padding:16px 18px;box-shadow:var(--shadow-sm);}
+    .rcard-title{font-size:11px;color:var(--text-mute);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;}
+
+    /* Grid boxes */
+    .box3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+    .box4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+    .ibox{background:var(--bg-input);border:1px solid var(--border-hi);border-radius:var(--r-md);padding:12px;text-align:center;}
+    .ibox-v{font-size:18px;font-weight:700;color:var(--text-hi);line-height:1;}
+    .ibox-v.green{color:var(--accent-green);}
+    .ibox-v.amber{color:var(--warn-amber);}
+    .ibox-v.red  {color:var(--warn-red);}
+    .ibox-l{font-size:10px;color:var(--text-mute);margin-top:4px;line-height:1.3;}
+
+    /* Cost rows */
+    .cost-row{display:flex;justify-content:space-between;align-items:center;
+      padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;gap:8px;margin-top:8px;}
+    .cost-row:last-child{border-bottom:none;padding-top:8px;}
+    .cost-l{color:var(--text-dim);flex:1;}
+    .cost-v{color:var(--text-mid);font-family:'SF Mono','Fira Mono','Courier New',monospace;white-space:nowrap;}
+
+    /* Warnings */
+    .warn{border-radius:var(--r-lg);padding:12px 16px;font-size:12px;line-height:1.6;display:none;}
+    .warn.on{display:block;}
+    .warn-t{font-weight:700;margin-bottom:4px;font-size:13px;}
+
+    /* Input styles */
+    .sinp{background:var(--bg-input);border:1px solid var(--border-hi);border-radius:var(--r-md);
+      color:var(--fg);padding:6px 10px;font-size:12px;font-family:inherit;width:100%;transition:border-color .2s;}
+    .sinp:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-tint);}
+
+    select.inp,input.inp{width:100%;background:var(--bg-input);border:1px solid var(--border-hi);
+      border-radius:var(--r-md);color:var(--text-mid);padding:8px 12px;font-size:13px;font-family:inherit;
+      transition:border-color .2s;}
+    select.inp{padding-right:30px;cursor:pointer;-webkit-appearance:none;appearance:none;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23636366' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+      background-repeat:no-repeat;background-position:right 12px center;}
+    select.inp:focus,input.inp:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-tint);}
+    textarea.inp{width:100%;background:var(--bg-input);border:1px solid var(--border-hi);
+      border-radius:var(--r-md);color:var(--text-mid);padding:8px 12px;font-size:13px;font-family:inherit;
+      transition:border-color .2s;resize:vertical;}
+    textarea.inp:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-tint);}
+
+    .field-lbl{font-size:11px;color:var(--text-mute);text-transform:uppercase;
+      letter-spacing:.05em;display:block;margin-bottom:4px;}
+
+    /* Print buttons */
+    .btn-print{padding:7px 14px;border-radius:var(--r-pill);border:1px solid var(--border-hi);
+      background:var(--bg-card2);color:var(--text-mid);font-size:12px;font-weight:600;cursor:pointer;
+      display:inline-flex;align-items:center;gap:5px;transition:all .2s;}
+    .btn-print:hover{border-color:var(--accent);color:var(--accent);}
+
+    .btn-gloss{padding:6px 12px;border-radius:var(--r-pill);border:1px solid var(--border-hi);background:transparent;color:var(--text-dim);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:5px;}
+    .btn-gloss:hover{border-color:var(--accent);color:var(--accent);}
+
+    /* Calc button */
+    .btn-calc{width:100%;background:var(--accent);color:#fff;border:none;border-radius:var(--r-md);
+      padding:12px;font-size:14px;font-weight:700;cursor:pointer;transition:background .15s,transform .1s;letter-spacing:-0.1px;}
+    .btn-calc:hover{background:var(--accent-lit);}
+    .btn-calc:active{transform:scale(.98);}
+
+    /* Slider */
+    input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;
+      background:var(--bg-input);border-radius:2px;outline:none;cursor:pointer;}
+    input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;
+      border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.4);}
+    input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--accent);
+      cursor:pointer;border:none;box-shadow:0 1px 4px rgba(0,0,0,.4);}
+
+    /* Checkbox */
+    .cb-row{display:flex;align-items:center;gap:10px;padding:6px 0;cursor:pointer;user-select:none;}
+    .cb-row input[type=checkbox]{width:15px;height:15px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;}
+    .cb-label{font-size:13px;color:var(--text-mid);}
+
+    /* Section separator label */
+    .sec-lbl{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;
+      border-bottom:1px solid var(--border);padding-bottom:8px;margin-bottom:12px;}
+
+    /* Interpretation card */
+    .interp-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-xl);
+      padding:18px;box-shadow:var(--shadow-sm);border-left:3px solid var(--accent);}
+    .interp-title{font-size:10px;font-weight:700;color:var(--text-mute);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;}
+    .interp-para{font-size:12px;color:var(--text-mid);line-height:1.7;margin-bottom:8px;}
+    .interp-para:last-child{margin-bottom:0;}
+
+    /* Projection table */
+    .proj-table{width:100%;border-collapse:collapse;font-size:12px;}
+    .proj-table th{font-weight:700;border-bottom:1px solid var(--border);padding:6px 0;color:var(--text-dim);
+      font-size:11px;text-transform:uppercase;letter-spacing:.05em;}
+    .proj-table th:not(:first-child){text-align:right;}
+    .proj-table td{padding:7px 0;border-bottom:1px solid var(--border);}
+    .proj-table td:not(:first-child){text-align:right;font-family:'SF Mono','Fira Mono','Courier New',monospace;}
+    .proj-table tr:last-child td{border-bottom:none;}
+
+    /* Savings bar */
+    .sav-bar-wrap{margin-top:14px;}
+    .sav-bar-track{height:8px;background:var(--bg-input);border-radius:4px;overflow:hidden;display:flex;}
+    .sav-seg{height:100%;transition:width .4s cubic-bezier(0.4,0,0.2,1);}
+
+    /* Footer */
+    .app-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;
+      gap:6px;padding:7px 20px;border-top:1px solid var(--border);flex-shrink:0;
+      font-size:10px;color:var(--text-mute);background:var(--bg-panel);}
+    .app-footer a{color:var(--accent);text-decoration:none;}
+    .app-footer a:hover{text-decoration:underline;}
+    .app-footer-cta{color:var(--text-dim);}
+
+    /* Print / PDF */
+    @media print {
+      body{background:#fff!important;color:#111!important;height:auto!important;overflow:visible!important;display:block!important;}
+      .app-header,.left,.split,.app-footer{display:none!important;}
+      .right{display:none!important;}
+      #print-bc-doc{display:block!important;}
+      *{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    }
+
+    /* Print document */
+    #print-bc-doc{display:none;font-family:'Helvetica Neue',Arial,sans-serif;color:#111;padding:40px;max-width:900px;margin:0 auto;}
+    .pdf-header{border-bottom:3px solid #111;padding-bottom:16px;margin-bottom:24px;}
+    .pdf-title{font-size:22px;font-weight:800;letter-spacing:-.5px;}
+    .pdf-subtitle{font-size:13px;color:#555;margin-top:4px;}
+    .pdf-meta{font-size:10px;color:#888;margin-top:6px;}
+    .pdf-section{margin-bottom:24px;}
+    .pdf-sec-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#333;border-bottom:1px solid #ddd;padding-bottom:6px;margin-bottom:12px;}
+    .pdf-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f0f0f0;font-size:12px;}
+    .pdf-row:last-child{border-bottom:none;}
+    .pdf-rl{color:#555;flex:1;}
+    .pdf-rv{font-weight:600;color:#111;text-align:right;}
+    .pdf-hl{background:#f0f9f4;border:1px solid #34d158;border-radius:8px;padding:12px 14px;margin:10px 0;}
+    .pdf-hl-title{font-size:11px;font-weight:700;color:#1a7a3a;margin-bottom:5px;}
+    .pdf-hl-text{font-size:12px;color:#333;line-height:1.6;}
+    .pdf-footer{margin-top:32px;padding-top:10px;border-top:1px solid #ddd;font-size:9px;color:#aaa;display:flex;justify-content:space-between;}
+
+    /* Responsive */
+    @media (max-width: 1100px) {
+      .left { width: 360px; min-width: 360px; }
+    }
+
+    @media (max-width: 860px) {
+      body { height: auto; overflow-y: auto; overflow-x: hidden; }
+      .split { flex-direction: column; overflow-y: visible; height: auto; flex: none; }
+      .left  { width: 100%; min-width: 0; max-width: 100%; border-right: none;
+                border-bottom: 1px solid var(--border); max-height: none; }
+      .right { overflow-y: visible; min-width: 0; }
+      .hdr-right { gap: 6px; flex-wrap: wrap; }
+      .btn-gloss, .btn-print { font-size: 11px; padding: 5px 8px; }
+    }
+
+    @media (max-width: 540px) {
+      .app-header { padding: 8px 12px; gap: 8px; flex-wrap: wrap; }
+      .hdr-right  { width: 100%; flex-wrap: wrap; justify-content: flex-end; gap: 5px; }
+      .box3 { grid-template-columns: 1fr 1fr; }
+      .box4 { grid-template-columns: 1fr 1fr; }
+      .left, .right  { padding: 12px; gap: 10px; }
+      .ibox-v { font-size: 16px; }
+    }
+
+    @media print { .app-footer { display: none!important; } }
+
+    /* Mode toggle — Apple segmented control (shared style) */
+    .mode-toggle{background:var(--bg-card2);border-radius:20px;padding:3px;display:flex;gap:2px;flex-shrink:0;}
+    .mode-btn{padding:6px 18px;border-radius:17px;border:none;font-size:13px;font-weight:600;
+      cursor:pointer;background:transparent;color:var(--text-mute);transition:all 0.2s;letter-spacing:-0.1px;}
+    .mode-btn.active{background:#ffffff;color:#000000;box-shadow:0 1px 4px rgba(0,0,0,0.3);}
+    body.light .mode-btn.active{background:#1d1d1f;color:#fff;}
+  </style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="app-logo">AI</div>
+  <h1>AI Business Case Builder</h1>
+  <span class="app-tagline">UAE Government AI Adoption · On-Premises</span>
+  <div class="hdr-right">
+    <a href="gpu-calculator.html" style="font-size:11px;color:var(--text-mute);text-decoration:none;padding:5px 10px;border-radius:var(--r-pill);border:1px solid var(--border)">GPU Calculator</a>
+    <button class="btn-gloss" id="btn-theme" onclick="toggleTheme()" title="Toggle light / dark theme">&#9728;</button>
+    <button class="btn-print" id="btn-print-bc" onclick="openPrintDoc()" style="display:none">Print Business Case</button>
+  </div>
+</header>
+
+<div class="split">
+
+<!-- LEFT PANEL -->
+<div class="left">
+
+  <!-- Section 1: Use Case Details -->
+  <div class="rcard">
+    <div class="sec-lbl">1 — Use Case Details</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div>
+        <label class="field-lbl" for="inp-title">Title</label>
+        <input class="inp" type="text" id="inp-title" placeholder="e.g. Invoice Processing Automation" oninput="calculate()">
+      </div>
+      <div>
+        <label class="field-lbl" for="inp-dept">Department</label>
+        <input class="inp" type="text" id="inp-dept" placeholder="e.g. Finance &amp; Procurement" oninput="calculate()">
+      </div>
+      <div>
+        <label class="field-lbl" for="inp-type">Type</label>
+        <select class="inp" id="inp-type" onchange="calculate()">
+          <option value="Process Automation">Process Automation</option>
+          <option value="Document Processing">Document Processing</option>
+          <option value="Decision Support">Decision Support</option>
+          <option value="Citizen / Customer Service">Citizen / Customer Service</option>
+        </select>
+      </div>
+      <div>
+        <label class="field-lbl" for="inp-desc">Description (optional)</label>
+        <textarea class="inp" id="inp-desc" rows="3" placeholder="Brief description of what the AI will do" oninput="calculate()"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 2: Current State -->
+  <div class="rcard">
+    <div class="sec-lbl">2 — Current State: How It Works Today</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div>
+        <label class="field-lbl" for="inp-staff">Staff involved in this process</label>
+        <input class="inp" type="number" id="inp-staff" value="5" min="1" oninput="calculate()">
+      </div>
+      <div>
+        <label class="field-lbl" for="inp-hours">Hours per week each staff member spends on it</label>
+        <input class="inp" type="number" id="inp-hours" value="20" min="1" max="80" oninput="calculate()">
+      </div>
+      <div>
+        <label class="field-lbl" for="inp-salary">Average annual salary (AED)</label>
+        <input class="inp" type="number" id="inp-salary" value="180000" step="5000" oninput="calculate()">
+      </div>
+      <div>
+        <label class="field-lbl" for="inp-items">Items / documents processed per day</label>
+        <input class="inp" type="number" id="inp-items" value="100" min="1" oninput="calculate()">
+      </div>
+      <div>
+        <label class="field-lbl" for="inp-mins">Average processing time per item (minutes)</label>
+        <input class="inp" type="number" id="inp-mins" value="30" min="1" oninput="calculate()">
+      </div>
+      <div>
+        <label class="field-lbl" for="inp-errorrate">Current error rate (%)</label>
+        <input class="inp" type="number" id="inp-errorrate" value="15" min="0" max="100" oninput="calculate()">
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 3: Expected AI Impact -->
+  <div class="rcard">
+    <div class="sec-lbl">3 — Expected AI Impact</div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+
+      <!-- AI Approach toggle -->
+      <div style="margin-bottom:14px">
+        <div style="font-size:10px;font-weight:700;color:var(--text-mute);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">AI Approach</div>
+        <div class="mode-toggle" style="width:100%">
+          <button class="mode-btn active" id="btn-automation" onclick="setAIMode('automation')">Automation</button>
+          <button class="mode-btn" id="btn-agentic" onclick="setAIMode('agentic')">Agentic AI</button>
+        </div>
+        <div style="font-size:11px;color:var(--text-mute);margin-top:6px" id="mode-desc">Replaces repetitive manual steps — speed, cost, error reduction.</div>
+      </div>
+
+      <div>
+        <label class="field-lbl">Process automation rate: <span id="auto-val" style="color:var(--accent);font-weight:700">70%</span></label>
+        <div style="display:flex;align-items:center;gap:10px">
+          <input type="range" min="10" max="95" value="70" id="inp-auto" oninput="document.getElementById('auto-val').textContent=this.value+'%';calculate()" style="flex:1">
+        </div>
+        <div style="font-size:10px;color:var(--text-mute);margin-top:4px">Percentage of the manual work the AI will handle</div>
+      </div>
+      <div>
+        <label class="field-lbl" for="inp-speed">Speed improvement</label>
+        <select class="inp" id="inp-speed" onchange="calculate()">
+          <option value="2">2x faster</option>
+          <option value="3" selected>3x faster</option>
+          <option value="5">5x faster</option>
+          <option value="10">10x faster</option>
+        </select>
+      </div>
+      <div>
+        <label class="field-lbl">Error reduction: <span id="errorredux-val" style="color:var(--accent);font-weight:700">60%</span></label>
+        <div style="display:flex;align-items:center;gap:10px">
+          <input type="range" min="10" max="90" value="60" id="inp-errorredux" oninput="document.getElementById('errorredux-val').textContent=this.value+'%';calculate()" style="flex:1">
+        </div>
+        <div style="font-size:10px;color:var(--text-mute);margin-top:4px">Expected reduction in errors compared to manual process</div>
+      </div>
+      <div>
+        <label class="field-lbl" for="inp-implcost">Implementation cost (AED)</label>
+        <input class="inp" type="number" id="inp-implcost" value="50000" step="5000" oninput="calculate()">
+        <div style="font-size:10px;color:var(--text-mute);margin-top:4px">Software, setup, integration — hardware already available</div>
+      </div>
+      <div>
+        <label class="field-lbl" for="inp-maintcost">Annual maintenance cost (AED)</label>
+        <input class="inp" type="number" id="inp-maintcost" value="15000" step="1000" oninput="calculate()">
+      </div>
+
+      <!-- AGENTIC-ONLY FIELDS (hidden by default) -->
+      <div class="agentic-only" style="display:none;flex-direction:column;gap:14px">
+
+        <div>
+          <label class="field-lbl" for="inp-accuracy">Decision accuracy target (%)</label>
+          <input class="inp" type="number" id="inp-accuracy" value="92" min="50" max="99" oninput="calculate()">
+          <div style="font-size:10px;color:var(--text-mute);margin-top:4px">% of agent decisions that match what a human expert would decide</div>
+        </div>
+
+        <div>
+          <label class="field-lbl">Autonomy rate: <span id="autonomy-val" style="color:var(--accent);font-weight:700">75%</span></label>
+          <div style="display:flex;align-items:center;gap:10px">
+            <input type="range" min="30" max="99" value="75" id="inp-autonomy" oninput="document.getElementById('autonomy-val').textContent=this.value+'%';calculate()" style="flex:1">
+          </div>
+          <div style="font-size:10px;color:var(--text-mute);margin-top:4px">% of tasks the agent completes end-to-end without human intervention</div>
+        </div>
+
+        <div>
+          <label class="field-lbl">Exception handling rate: <span id="exception-val" style="color:var(--accent);font-weight:700">60%</span></label>
+          <div style="display:flex;align-items:center;gap:10px">
+            <input type="range" min="20" max="90" value="60" id="inp-exception" oninput="document.getElementById('exception-val').textContent=this.value+'%';calculate()" style="flex:1">
+          </div>
+          <div style="font-size:10px;color:var(--text-mute);margin-top:4px">% of edge cases the agent resolves without escalating to a human</div>
+        </div>
+
+        <div>
+          <label class="field-lbl" for="inp-systems">Systems connected (count)</label>
+          <input class="inp" type="number" id="inp-systems" value="3" min="1" max="20" oninput="calculate()">
+          <div style="font-size:10px;color:var(--text-mute);margin-top:4px">Number of separate systems the agent orchestrates (email, ERP, HR, etc.)</div>
+        </div>
+
+        <label class="cb-row">
+          <input type="checkbox" id="inp-247" checked onchange="calculate()">
+          <span class="cb-label">Available 24/7</span>
+        </label>
+        <div style="font-size:10px;color:var(--text-mute);margin-top:-8px;padding-left:25px">Agent operates outside business hours (nights, weekends, public holidays)</div>
+
+      </div><!-- /.agentic-only -->
+
+    </div>
+  </div>
+
+  <!-- Section 4: Strategic Alignment -->
+  <div class="rcard">
+    <div class="sec-lbl">4 — Strategic Alignment</div>
+    <div style="display:flex;flex-direction:column;gap:2px">
+      <label class="cb-row">
+        <input type="checkbox" class="pillar-cb" data-label="Government Services Transformation" checked>
+        <span class="cb-label">Government Services Transformation</span>
+      </label>
+      <label class="cb-row">
+        <input type="checkbox" class="pillar-cb" data-label="Data &amp; AI Infrastructure" checked>
+        <span class="cb-label">Data &amp; AI Infrastructure</span>
+      </label>
+      <label class="cb-row">
+        <input type="checkbox" class="pillar-cb" data-label="Economic Diversification" checked>
+        <span class="cb-label">Economic Diversification</span>
+      </label>
+      <label class="cb-row">
+        <input type="checkbox" class="pillar-cb" data-label="Agentic AI — 2028 National Mandate" checked>
+        <span class="cb-label">Agentic AI — 2028 National Mandate</span>
+      </label>
+      <label class="cb-row">
+        <input type="checkbox" class="pillar-cb" data-label="AI Talent Development">
+        <span class="cb-label">AI Talent Development</span>
+      </label>
+    </div>
+  </div>
+
+  <!-- Calculate button -->
+  <button onclick="calculate()" class="btn-calc">Generate Business Case</button>
+
+</div><!-- /left -->
+
+<!-- RIGHT PANEL -->
+<div class="right" id="right-panel">
+
+  <!-- Empty state -->
+  <div id="bc-empty" style="text-align:center;padding:60px 24px;color:var(--text-mute)">
+    <div style="font-size:32px;margin-bottom:16px;color:var(--border-hi);font-weight:700;font-family:'SF Mono','Fira Mono','Courier New',monospace">AED 0</div>
+    <div style="font-size:13px">Fill in the process details on the left<br>and click Generate Business Case</div>
+  </div>
+
+  <!-- Results (hidden until first calculation) -->
+  <div id="bc-results" style="display:none;flex-direction:column;gap:12px">
+
+    <!-- Card 1: Financial Summary -->
+    <div class="rcard">
+      <div class="rcard-title">Financial Summary</div>
+      <div class="box4">
+        <div class="ibox">
+          <div class="ibox-v green" id="res-annual-benefit">—</div>
+          <div class="ibox-l">Annual Benefit</div>
+        </div>
+        <div class="ibox">
+          <div class="ibox-v" id="res-payback">—</div>
+          <div class="ibox-l">Payback Period</div>
+        </div>
+        <div class="ibox">
+          <div class="ibox-v green" id="res-roi">—</div>
+          <div class="ibox-l">3-Year ROI</div>
+        </div>
+        <div class="ibox">
+          <div class="ibox-v" id="res-net3yr">—</div>
+          <div class="ibox-l">3-Year Net Saving</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 2: Savings Breakdown -->
+    <div class="rcard">
+      <div class="rcard-title">Savings Breakdown</div>
+      <div class="cost-row" style="margin-top:0">
+        <span class="cost-l">Staff time freed</span>
+        <span class="cost-v green" id="res-saving-time">—</span>
+      </div>
+      <div class="cost-row">
+        <span class="cost-l">Speed &amp; throughput gain</span>
+        <span class="cost-v" id="res-saving-speed" style="color:var(--warn-amber)">—</span>
+      </div>
+      <div class="cost-row">
+        <span class="cost-l">Error reduction</span>
+        <span class="cost-v" id="res-saving-error" style="color:var(--warn-blue)">—</span>
+      </div>
+      <!-- Agentic-only saving rows -->
+      <div class="cost-row agentic-only" style="display:none">
+        <span class="cost-l">Decision &amp; autonomy value</span>
+        <span class="cost-v" id="res-saving-decision" style="color:var(--warn-purple)">—</span>
+      </div>
+      <div class="cost-row agentic-only" style="display:none">
+        <span class="cost-l">System coordination saving</span>
+        <span class="cost-v" id="res-saving-coord">—</span>
+      </div>
+      <div class="cost-row agentic-only" style="display:none">
+        <span class="cost-l">24/7 availability value</span>
+        <span class="cost-v" id="res-saving-247">—</span>
+      </div>
+      <div class="sav-bar-wrap">
+        <div class="sav-bar-track">
+          <div class="sav-seg" id="sav-seg-time" style="background:var(--accent-green);width:0%"></div>
+          <div class="sav-seg" id="sav-seg-speed" style="background:var(--warn-amber);width:0%"></div>
+          <div class="sav-seg" id="sav-seg-error" style="background:var(--warn-blue);width:0%"></div>
+        </div>
+        <div style="display:flex;gap:14px;margin-top:6px;flex-wrap:wrap">
+          <span style="font-size:10px;color:var(--accent-green)">— Staff time</span>
+          <span style="font-size:10px;color:var(--warn-amber)">— Speed</span>
+          <span style="font-size:10px;color:var(--warn-blue)">— Errors</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 3: Operational Impact -->
+    <div class="rcard">
+      <div class="rcard-title">Operational Impact</div>
+      <div class="box3">
+        <div class="ibox">
+          <div class="ibox-v green" id="res-hrs-freed">—</div>
+          <div class="ibox-l">Hours Freed<br>per year</div>
+        </div>
+        <div class="ibox">
+          <div class="ibox-v" id="res-fte">—</div>
+          <div class="ibox-l">FTE Equivalent</div>
+        </div>
+        <div class="ibox">
+          <div class="ibox-v" id="res-speed">—</div>
+          <div class="ibox-l">Speed Gain</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 4: Strategic Alignment -->
+    <div class="rcard">
+      <div class="rcard-title">Strategic Alignment</div>
+      <div id="res-pillars" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:2px"></div>
+    </div>
+
+    <!-- Card 5: Plain English Summary -->
+    <div class="interp-card">
+      <div class="interp-title">Why Approve This Project?</div>
+      <div class="interp-para" id="res-summary"></div>
+    </div>
+
+    <!-- Card 6: Year-by-Year Projection -->
+    <div class="rcard">
+      <div class="rcard-title">3-Year Projection</div>
+      <table class="proj-table">
+        <thead>
+          <tr>
+            <th style="text-align:left">Year</th>
+            <th>Gross Benefit</th>
+            <th>Costs</th>
+            <th>Net</th>
+          </tr>
+        </thead>
+        <tbody id="res-projection"></tbody>
+      </table>
+    </div>
+
+    <!-- Card 7: Governance & Risk (agentic mode only) -->
+    <div class="rcard" id="card-governance" style="display:none">
+      <div class="rcard-title">Governance &amp; Risk</div>
+      <div id="gov-content"></div>
+    </div>
+
+  </div><!-- /#bc-results -->
+</div><!-- /right -->
+</div><!-- /split -->
+
+<footer class="app-footer">
+  <span>On-Premises AI Toolkit — open source, free to use</span>
+  <span class="app-footer-cta">Planning a deployment? <a href="https://nik1907.github.io/onprem-ai-toolkit/" target="_blank" rel="noopener">nik1907.github.io/onprem-ai-toolkit</a> &nbsp;·&nbsp; <a href="mailto:gnikki.reddy@gmail.com">Get in touch</a></span>
+</footer>
+
+<!-- Print document (hidden until print) -->
+<div id="print-bc-doc">
+  <div class="pdf-header">
+    <div class="pdf-title">AI Project Business Case</div>
+    <div class="pdf-subtitle" id="bc-doc-title"></div>
+    <div class="pdf-meta" id="bc-doc-meta"></div>
+  </div>
+
+  <!-- Arabic executive summary -->
+  <div class="pdf-section" style="direction:rtl;text-align:right;font-family:Arial,sans-serif;border:1px solid #ddd;border-radius:8px;padding:16px;margin-bottom:20px;background:#f9f9f9">
+    <div style="font-size:13px;font-weight:700;margin-bottom:8px;color:#1a7a3a">&#1605;&#1604;&#1582;&#1589; &#1578;&#1606;&#1601;&#1610;&#1584;&#1610;</div>
+    <div style="font-size:12px;line-height:1.8;color:#333" id="bc-arabic-summary"></div>
+  </div>
+
+  <!-- English content -->
+  <div class="pdf-section">
+    <div class="pdf-sec-title">Current State</div>
+    <div id="bc-current-state"></div>
+  </div>
+
+  <div class="pdf-section">
+    <div class="pdf-sec-title">Financial Analysis</div>
+    <div id="bc-financials"></div>
+  </div>
+
+  <div class="pdf-section">
+    <div class="pdf-sec-title">3-Year Projection</div>
+    <div id="bc-projection"></div>
+  </div>
+
+  <!-- Agentic Governance section (hidden until agentic mode print) -->
+  <div class="pdf-section" id="bc-agentic-section" style="display:none">
+    <div class="pdf-sec-title">Agentic AI — Governance Framework</div>
+    <div id="bc-agentic-content"></div>
+  </div>
+
+  <div class="pdf-section">
+    <div class="pdf-sec-title">UAE AI Strategy Alignment</div>
+    <div id="bc-pillars"></div>
+  </div>
+
+  <div class="pdf-section">
+    <div class="pdf-sec-title">Recommendation</div>
+    <div class="pdf-hl">
+      <div class="pdf-hl-title">RECOMMENDED FOR APPROVAL</div>
+      <div class="pdf-hl-text" id="bc-recommendation"></div>
+    </div>
+  </div>
+
+  <div class="pdf-footer">
+    <span>Generated by AI Business Case Builder — On-Premises AI Toolkit</span>
+    <span id="bc-footer-date"></span>
+  </div>
+</div><!-- /#print-bc-doc -->
+
+<script>
+/* ═══════════════════════════════════════
+   AI MODE TOGGLE
+═══════════════════════════════════════ */
+var _aiMode = 'automation';
+
+function setAIMode(mode) {
+  _aiMode = mode;
+  document.getElementById('btn-automation').classList.toggle('active', mode === 'automation');
+  document.getElementById('btn-agentic').classList.toggle('active', mode === 'agentic');
+
+  var desc = mode === 'agentic'
+    ? 'Makes decisions, handles exceptions, and orchestrates across systems — measures autonomy and decision quality.'
+    : 'Replaces repetitive manual steps — speed, cost, error reduction.';
+  document.getElementById('mode-desc').textContent = desc;
+
+  // Show/hide agentic-only fields
+  document.querySelectorAll('.agentic-only').forEach(function(el) {
+    el.style.display = mode === 'agentic' ? '' : 'none';
+  });
+  document.querySelectorAll('.automation-only').forEach(function(el) {
+    el.style.display = mode === 'automation' ? '' : 'none';
+  });
+
+  calculate();
+}
+
+/* ═══════════════════════════════════════
+   THEME TOGGLE
+═══════════════════════════════════════ */
+var _theme = 'dark';
+function toggleTheme() {
+  _theme = _theme === 'dark' ? 'light' : 'dark';
+  document.body.classList.toggle('light', _theme === 'light');
+  var btn = document.getElementById('btn-theme');
+  if (btn) btn.textContent = _theme === 'light' ? '☽' : '☀';
+  try { localStorage.setItem('gpu_calc_theme', _theme); } catch(e) {}
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  // Restore theme preference (shared key with GPU calculator)
+  try { _theme = localStorage.getItem('gpu_calc_theme') || 'dark'; } catch(e){}
+  if (_theme === 'light') {
+    document.body.classList.add('light');
+    var tb = document.getElementById('btn-theme');
+    if (tb) tb.textContent = '☽';
+  }
+
+  // Wire pillar checkboxes to recalculate
+  document.querySelectorAll('.pillar-cb').forEach(function(cb) {
+    cb.addEventListener('change', calculate);
+  });
+
+  // Set initial AI mode (hides agentic fields, sets correct button state)
+  setAIMode('automation');
+
+  // Run initial calculation with defaults so results are ready
+  calculate();
+});
+
+/* ═══════════════════════════════════════
+   CALCULATION ENGINE
+═══════════════════════════════════════ */
+function calculate() {
+  var title      = document.getElementById('inp-title').value || 'AI Use Case';
+  var dept       = document.getElementById('inp-dept').value  || '—';
+  var type       = document.getElementById('inp-type').value;
+  var staff      = +document.getElementById('inp-staff').value      || 5;
+  var hoursWk    = +document.getElementById('inp-hours').value      || 20;
+  var salary     = +document.getElementById('inp-salary').value     || 180000;
+  var itemsDay   = +document.getElementById('inp-items').value      || 100;
+  var minsItem   = +document.getElementById('inp-mins').value       || 30;
+  var errorRate  = +document.getElementById('inp-errorrate').value  || 15;
+  var autoRate   = +document.getElementById('inp-auto').value       || 70;
+  var speedMult  = +document.getElementById('inp-speed').value      || 3;
+  var errorRedux = +document.getElementById('inp-errorredux').value || 60;
+  var implCost   = +document.getElementById('inp-implcost').value   || 50000;
+  var maintCost  = +document.getElementById('inp-maintcost').value  || 15000;
+
+  // Derived rates
+  var hourlyRate     = salary / (52 * 40);
+  var annualHrsEach  = hoursWk * 52;
+  var totalAnnualHrs = annualHrsEach * staff;
+
+  // SAVING 1 — Staff time freed by automation
+  var hrsSaved   = totalAnnualHrs * (autoRate / 100);
+  var fteSaved   = hrsSaved / (52 * 40);
+  var timeSaving = hrsSaved * hourlyRate;
+
+  // SAVING 2 — Throughput / speed gain
+  var annualItems  = itemsDay * 250;
+  var hoursPerItem = minsItem / 60;
+  var speedSaving  = annualItems * hoursPerItem * (1 - 1 / speedMult) * hourlyRate * staff;
+  speedSaving      = Math.min(speedSaving, timeSaving * 0.5);
+
+  // SAVING 3 — Error reduction
+  var annualErrors  = annualItems * (errorRate / 100);
+  var errorsAvoided = annualErrors * (errorRedux / 100);
+  var fixTimePer    = (minsItem * 2) / 60;
+  var errorSaving   = errorsAvoided * fixTimePer * hourlyRate;
+
+  var annualBenefit  = Math.round(timeSaving + speedSaving + errorSaving);
+
+  // Agentic mode — additional savings
+  if (_aiMode === 'agentic') {
+    var autonomyRate   = +document.getElementById('inp-autonomy').value / 100 || 0.75;
+    var exceptionRate  = +document.getElementById('inp-exception').value / 100 || 0.60;
+    var systemsCount   = +document.getElementById('inp-systems').value || 3;
+    var available24_7  = document.getElementById('inp-247').checked;
+    var decisionAcc    = +document.getElementById('inp-accuracy').value || 92;
+
+    // Decision & coordination value
+    var seniorRate     = hourlyRate * 1.5;
+    var decisionsPerDay = itemsDay * (exceptionRate);
+    var hoursPerDecision = 0.5;
+    var decisionValue  = decisionsPerDay * hoursPerDecision * seniorRate * 250;
+
+    // Coordination overhead eliminated
+    var coordinationSaving = systemsCount * 2 * hourlyRate * 52;
+
+    // 24/7 availability value
+    var afterHoursSaving = available24_7
+      ? itemsDay * 0.30 * (minsItem / 60) * hourlyRate * 250
+      : 0;
+
+    var agenticBonus = Math.round(decisionValue + coordinationSaving + afterHoursSaving);
+    annualBenefit += agenticBonus;
+
+    window._bcAgenticData = {
+      agenticBonus:        agenticBonus,
+      decisionValue:       Math.round(decisionValue),
+      coordinationSaving:  Math.round(coordinationSaving),
+      afterHoursSaving:    Math.round(afterHoursSaving),
+      autonomyRate:        Math.round(autonomyRate * 100),
+      exceptionRate:       Math.round(exceptionRate * 100),
+      systemsCount:        systemsCount,
+      available24_7:       available24_7,
+      decisionAcc:         decisionAcc
+    };
+  } else {
+    window._bcAgenticData = null;
+  }
+
+  var paybackMonths  = annualBenefit > 0 ? Math.ceil((implCost / annualBenefit) * 12) : 999;
+
+  var yr1Net     = annualBenefit - implCost - maintCost;
+  var yr2Net     = annualBenefit - maintCost;
+  var yr3Net     = annualBenefit - maintCost;
+  var threeYrNet = yr1Net + yr2Net + yr3Net;
+  var totalCost3yr = implCost + maintCost * 3;
+  var roi3yr     = totalCost3yr > 0 ? Math.round((threeYrNet / totalCost3yr) * 100) : 0;
+
+  window._bcData = {
+    title: title, dept: dept, type: type, staff: staff, hoursWk: hoursWk,
+    salary: salary, itemsDay: itemsDay, minsItem: minsItem, errorRate: errorRate,
+    autoRate: autoRate, speedMult: speedMult, errorRedux: errorRedux,
+    implCost: implCost, maintCost: maintCost,
+    hourlyRate: hourlyRate, hrsSaved: hrsSaved, fteSaved: fteSaved,
+    timeSaving: timeSaving, speedSaving: speedSaving, errorSaving: errorSaving,
+    annualBenefit: annualBenefit, paybackMonths: paybackMonths,
+    yr1Net: yr1Net, yr2Net: yr2Net, yr3Net: yr3Net,
+    threeYrNet: threeYrNet, roi3yr: roi3yr,
+    pillars: getSelectedPillars(),
+    aiMode: _aiMode,
+    agentic: window._bcAgenticData
+  };
+
+  renderResults(window._bcData);
+  document.getElementById('btn-print-bc').style.display = '';
+}
+
+function getSelectedPillars() {
+  var pillars = [];
+  document.querySelectorAll('.pillar-cb:checked').forEach(function(cb) {
+    pillars.push(cb.dataset.label);
+  });
+  return pillars;
+}
+
+/* ═══════════════════════════════════════
+   HELPERS
+═══════════════════════════════════════ */
+function costRow(label, value) {
+  return '<div class="cost-row" style="margin-top:0"><span class="cost-l">' + label + '</span><span class="cost-v">' + value + '</span></div>';
+}
+
+/* ═══════════════════════════════════════
+   RENDER RESULTS
+═══════════════════════════════════════ */
+function renderResults(R) {
+  document.getElementById('bc-empty').style.display = 'none';
+  var res = document.getElementById('bc-results');
+  res.style.display = 'flex';
+
+  // Card 1: Financial Summary
+  document.getElementById('res-annual-benefit').textContent = R.annualBenefit.toLocaleString() + ' AED';
+
+  var payEl = document.getElementById('res-payback');
+  payEl.textContent = R.paybackMonths >= 999 ? 'N/A' : R.paybackMonths + ' months';
+  payEl.className = 'ibox-v';
+  if (R.paybackMonths <= 12) payEl.classList.add('green');
+  else if (R.paybackMonths > 24) payEl.classList.add('amber');
+
+  document.getElementById('res-roi').textContent = R.roi3yr + '%';
+  document.getElementById('res-roi').className = 'ibox-v' + (R.roi3yr > 0 ? ' green' : '');
+
+  var net3El = document.getElementById('res-net3yr');
+  net3El.textContent = R.threeYrNet.toLocaleString() + ' AED';
+  net3El.className = 'ibox-v' + (R.threeYrNet >= 0 ? ' green' : ' red');
+
+  // Card 2: Savings Breakdown
+  document.getElementById('res-saving-time').textContent  = Math.round(R.timeSaving).toLocaleString() + ' AED/yr';
+  document.getElementById('res-saving-speed').textContent = Math.round(R.speedSaving).toLocaleString() + ' AED/yr';
+  document.getElementById('res-saving-error').textContent = Math.round(R.errorSaving).toLocaleString() + ' AED/yr';
+
+  if (R.aiMode === 'agentic' && R.agentic) {
+    var A = R.agentic;
+    document.getElementById('res-saving-decision').textContent = A.decisionValue.toLocaleString() + ' AED/yr';
+    document.getElementById('res-saving-coord').textContent    = A.coordinationSaving.toLocaleString() + ' AED/yr';
+    document.getElementById('res-saving-247').textContent      = A.afterHoursSaving.toLocaleString() + ' AED/yr';
+  }
+
+  var total = R.timeSaving + R.speedSaving + R.errorSaving;
+  if (total > 0) {
+    document.getElementById('sav-seg-time').style.width  = (R.timeSaving  / total * 100).toFixed(1) + '%';
+    document.getElementById('sav-seg-speed').style.width = (R.speedSaving / total * 100).toFixed(1) + '%';
+    document.getElementById('sav-seg-error').style.width = (R.errorSaving / total * 100).toFixed(1) + '%';
+  }
+
+  // Card 3: Operational Impact
+  document.getElementById('res-hrs-freed').textContent = Math.round(R.hrsSaved).toLocaleString() + ' hrs/yr';
+  document.getElementById('res-fte').textContent       = R.fteSaved.toFixed(1) + ' FTE';
+  document.getElementById('res-speed').textContent     = R.speedMult + 'x faster';
+
+  // Card 4: Strategic Alignment
+  var pillarsEl = document.getElementById('res-pillars');
+  if (R.pillars.length === 0) {
+    pillarsEl.innerHTML = '<span style="font-size:12px;color:var(--text-mute)">No pillars selected.</span>';
+  } else {
+    pillarsEl.innerHTML = R.pillars.map(function(p) {
+      return '<span style="display:inline-block;padding:3px 10px;border-radius:var(--r-pill);background:var(--accent-tint);border:1px solid var(--accent);color:var(--accent);font-size:11px;font-weight:600;margin:3px">' + p + '</span>';
+    }).join('');
+  }
+
+  // Card 5: Plain English Summary
+  var summary = 'The ' + R.title + ' project automates ' + R.autoRate + '% of manual work in ' + R.dept +
+    ', freeing ' + Math.round(R.hrsSaved).toLocaleString() + ' staff hours per year (' + R.fteSaved.toFixed(1) + ' FTE equivalent). ' +
+    'With an implementation cost of AED ' + R.implCost.toLocaleString() + ', the investment pays back in ' +
+    (R.paybackMonths >= 999 ? 'an extended period' : R.paybackMonths + ' months') +
+    ' and delivers AED ' + R.threeYrNet.toLocaleString() + ' in net savings over three years. ' +
+    'This directly supports ' + R.pillars.length + ' UAE AI Strategy pillar' + (R.pillars.length !== 1 ? 's' : '') +
+    (R.pillars.includes('Agentic AI — 2028 National Mandate') ? ', including the 2028 Agentic AI mandate' : '') + '.';
+  if (R.aiMode === 'agentic' && R.agentic) {
+    var A = R.agentic;
+    summary += ' The agent operates at ' + A.autonomyRate + '% autonomy, handling ' + A.exceptionRate + '% of exceptions independently across ' + A.systemsCount + ' connected systems' + (A.available24_7 ? ', available 24/7 including outside business hours' : '') + '.';
+  }
+  document.getElementById('res-summary').textContent = summary;
+
+  // Card 6: Projection
+  var tbody = document.getElementById('res-projection');
+  tbody.innerHTML =
+    projRow('Year 1', R.annualBenefit, R.implCost + R.maintCost, R.yr1Net) +
+    projRow('Year 2', R.annualBenefit, R.maintCost, R.yr2Net) +
+    projRow('Year 3', R.annualBenefit, R.maintCost, R.yr3Net);
+
+  // Card 7: Governance & Risk (agentic mode only)
+  var govCard = document.getElementById('card-governance');
+  if (R.aiMode === 'agentic' && R.agentic) {
+    var A = R.agentic;
+    var riskLevel = A.autonomyRate > 85 ? 'High' : A.autonomyRate > 60 ? 'Medium' : 'Low';
+    var riskColor = A.autonomyRate > 85 ? 'var(--warn-red)' : A.autonomyRate > 60 ? 'var(--warn-amber)' : 'var(--accent)';
+    var oversightText = riskLevel === 'High' ? 'Daily human review mandatory' : riskLevel === 'Medium' ? 'Weekly audit recommended' : 'Monthly review sufficient';
+    var cascadeRisk = A.systemsCount > 5 ? 'High — multi-system agent requires circuit breaker' : 'Manageable — review rollback procedures';
+
+    document.getElementById('gov-content').innerHTML =
+      costRow('Autonomy rate', A.autonomyRate + '% of tasks fully autonomous') +
+      costRow('Exception handling', A.exceptionRate + '% resolved without escalation') +
+      costRow('Decision accuracy target', A.decisionAcc + '%') +
+      costRow('Systems orchestrated', A.systemsCount + ' connected systems') +
+      costRow('Autonomy risk level', '<span style="color:' + riskColor + ';font-weight:700">' + riskLevel + '</span>') +
+      costRow('Required oversight', oversightText) +
+      costRow('Audit trail', 'All agent decisions must be logged and explainable') +
+      costRow('Cascade risk', cascadeRisk);
+
+    govCard.style.display = '';
+  } else {
+    govCard.style.display = 'none';
+  }
+}
+
+function projRow(yr, benefit, costs, net) {
+  var netColor = net >= 0 ? 'var(--accent-green)' : 'var(--warn-red)';
+  return '<tr>' +
+    '<td>' + yr + '</td>' +
+    '<td style="text-align:right;font-family:\'SF Mono\',\'Fira Mono\',\'Courier New\',monospace">AED ' + Math.round(benefit).toLocaleString() + '</td>' +
+    '<td style="text-align:right;font-family:\'SF Mono\',\'Fira Mono\',\'Courier New\',monospace">AED ' + Math.round(costs).toLocaleString() + '</td>' +
+    '<td style="text-align:right;font-weight:700;color:' + netColor + ';font-family:\'SF Mono\',\'Fira Mono\',\'Courier New\',monospace">AED ' + Math.round(net).toLocaleString() + '</td>' +
+    '</tr>';
+}
+
+/* ═══════════════════════════════════════
+   ARABIC SUMMARY
+═══════════════════════════════════════ */
+function buildArabicSummary(R) {
+  var text = 'يهدف هذا المشروع إلى تطبيق الذكاء الاصطناعي في ' + R.dept + ' لأتمتة ' + R.autoRate + '٪ من العمل اليدوي. ' +
+    'من المتوقع توفير ' + Math.round(R.hrsSaved).toLocaleString() + ' ساعة عمل سنوياً بما يعادل ' + R.fteSaved.toFixed(1) + ' وظيفة معادلة. ' +
+    'التوفير السنوي المتوقع: ' + R.annualBenefit.toLocaleString() + ' درهم إماراتي. ' +
+    'فترة الاسترداد: ' + R.paybackMonths + ' شهراً. ' +
+    'صافي التوفير خلال ثلاث سنوات: ' + R.threeYrNet.toLocaleString() + ' درهم إماراتي. ' +
+    'يتوافق هذا المشروع مع الاستراتيجية الوطنية للذكاء الاصطناعي لدولة الإمارات العربية المتحدة ومبادرة الذكاء الاصطناعي الوكيلي 2028.';
+  if (R.aiMode === 'agentic' && R.agentic) {
+    var A = R.agentic;
+    text += ' يعمل الذكاء الاصطناعي الوكيلي باستقلالية بنسبة ' + A.autonomyRate + '٪، ويتعامل مع ' + A.exceptionRate + '٪ من الحالات الاستثنائية تلقائياً عبر ' + A.systemsCount + ' أنظمة مترابطة.';
+  }
+  return text;
+}
+
+/* ═══════════════════════════════════════
+   PRINT DOCUMENT
+═══════════════════════════════════════ */
+function openPrintDoc() {
+  if (!window._bcData) return;
+  var R = window._bcData;
+  var dateStr = new Date().toLocaleDateString('en-GB');
+
+  document.getElementById('bc-doc-title').textContent = R.title;
+  document.getElementById('bc-doc-meta').textContent = 'Department: ' + R.dept + '  ·  Type: ' + R.type + '  ·  Date: ' + dateStr;
+  document.getElementById('bc-arabic-summary').textContent = buildArabicSummary(R);
+
+  document.getElementById('bc-current-state').innerHTML =
+    '<table style="width:100%;font-size:12px;border-collapse:collapse">' +
+    pdfRow('Staff involved', R.staff + ' people') +
+    pdfRow('Hours spent weekly (per person)', R.hoursWk + ' hrs') +
+    pdfRow('Items processed per day', R.itemsDay.toLocaleString()) +
+    pdfRow('Processing time per item', R.minsItem + ' minutes') +
+    pdfRow('Current error rate', R.errorRate + '%') +
+    pdfRow('Annual cost of this process', 'AED ' + Math.round(R.salary * R.staff * (R.hoursWk / 40)).toLocaleString()) +
+    '</table>';
+
+  var finRows =
+    pdfRow('Annual benefit from automation', 'AED ' + R.annualBenefit.toLocaleString()) +
+    pdfRow('  — Staff time saving', 'AED ' + Math.round(R.timeSaving).toLocaleString()) +
+    pdfRow('  — Speed &amp; throughput gain', 'AED ' + Math.round(R.speedSaving).toLocaleString()) +
+    pdfRow('  — Error reduction saving', 'AED ' + Math.round(R.errorSaving).toLocaleString());
+  if (R.aiMode === 'agentic' && R.agentic) {
+    var Af = R.agentic;
+    finRows +=
+      pdfRow('  — Decision &amp; autonomy value', 'AED ' + Af.decisionValue.toLocaleString()) +
+      pdfRow('  — System coordination saving', 'AED ' + Af.coordinationSaving.toLocaleString()) +
+      pdfRow('  — 24/7 availability value', 'AED ' + Af.afterHoursSaving.toLocaleString());
+  }
+  finRows +=
+    pdfRow('Implementation cost', 'AED ' + R.implCost.toLocaleString()) +
+    pdfRow('Annual maintenance', 'AED ' + R.maintCost.toLocaleString()) +
+    pdfRow('Payback period', (R.paybackMonths >= 999 ? 'N/A' : R.paybackMonths + ' months')) +
+    pdfRow('3-Year ROI', R.roi3yr + '%');
+  document.getElementById('bc-financials').innerHTML =
+    '<table style="width:100%;font-size:12px;border-collapse:collapse">' + finRows + '</table>';
+
+  document.getElementById('bc-projection').innerHTML =
+    '<table style="width:100%;font-size:12px;border-collapse:collapse">' +
+    '<tr style="font-weight:700;border-bottom:1px solid #ddd"><td style="padding:6px 0">Year</td><td style="text-align:right">Gross Benefit</td><td style="text-align:right">Costs</td><td style="text-align:right">Net</td></tr>' +
+    pdfProjRow('Year 1', R.annualBenefit, R.implCost + R.maintCost, R.yr1Net) +
+    pdfProjRow('Year 2', R.annualBenefit, R.maintCost, R.yr2Net) +
+    pdfProjRow('Year 3', R.annualBenefit, R.maintCost, R.yr3Net) +
+    '</table>';
+
+  document.getElementById('bc-pillars').innerHTML = R.pillars.map(function(p) {
+    return '<div style="padding:4px 0;font-size:12px">&#10003; ' + p + '</div>';
+  }).join('');
+
+  document.getElementById('bc-recommendation').textContent =
+    'Based on a payback period of ' + (R.paybackMonths >= 999 ? 'an extended period' : R.paybackMonths + ' months') +
+    ' and a 3-year net saving of AED ' + R.threeYrNet.toLocaleString() +
+    ', this project is recommended for approval. ' +
+    'It directly supports ' + R.pillars.length + ' pillar' + (R.pillars.length !== 1 ? 's' : '') +
+    ' of the UAE National AI Strategy.';
+
+  document.getElementById('bc-footer-date').textContent = 'Generated: ' + dateStr;
+
+  // Agentic governance section in print doc
+  var agenticSection = document.getElementById('bc-agentic-section');
+  if (R.aiMode === 'agentic' && R.agentic) {
+    var Ap = R.agentic;
+    var riskLevelP = Ap.autonomyRate > 85 ? 'High' : Ap.autonomyRate > 60 ? 'Medium' : 'Low';
+    var oversightTextP = riskLevelP === 'High' ? 'Daily human review mandatory' : riskLevelP === 'Medium' ? 'Weekly audit recommended' : 'Monthly review sufficient';
+    function row(l, v) { return '<tr style="border-bottom:1px solid #f0f0f0"><td style="padding:5px 0;color:#555">' + l + '</td><td style="text-align:right;font-weight:600;color:#111;padding:5px 0">' + v + '</td></tr>'; }
+    document.getElementById('bc-agentic-content').innerHTML =
+      '<table style="width:100%;font-size:12px;border-collapse:collapse">' +
+      row('Autonomy rate', Ap.autonomyRate + '% of tasks completed without human intervention') +
+      row('Decision accuracy target', Ap.decisionAcc + '%') +
+      row('Exception handling', Ap.exceptionRate + '% of edge cases resolved autonomously') +
+      row('Connected systems', Ap.systemsCount + ' systems') +
+      row('24/7 availability', Ap.available24_7 ? 'Yes — operates outside business hours' : 'No — business hours only') +
+      row('Risk level', riskLevelP) +
+      row('Required oversight model', oversightTextP) +
+      row('Audit requirement', 'Full decision log required — all agent actions must be traceable') +
+      '</table>';
+    agenticSection.style.display = '';
+  } else {
+    agenticSection.style.display = 'none';
+  }
+
+  window.print();
+}
+
+function pdfRow(label, value) {
+  return '<tr style="border-bottom:1px solid #f0f0f0"><td style="padding:5px 0;color:#555">' + label + '</td><td style="text-align:right;font-weight:600;color:#111;padding:5px 0">' + value + '</td></tr>';
+}
+
+function pdfProjRow(yr, benefit, costs, net) {
+  var netColor = net >= 0 ? '#1a7a3a' : '#cc3333';
+  return '<tr style="border-bottom:1px solid #f0f0f0">' +
+    '<td style="padding:6px 0">' + yr + '</td>' +
+    '<td style="text-align:right">AED ' + Math.round(benefit).toLocaleString() + '</td>' +
+    '<td style="text-align:right">AED ' + Math.round(costs).toLocaleString() + '</td>' +
+    '<td style="text-align:right;font-weight:700;color:' + netColor + '">AED ' + Math.round(net).toLocaleString() + '</td>' +
+    '</tr>';
+}
+</script>
+</body>
+</html>

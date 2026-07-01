@@ -9,6 +9,7 @@ A collection of offline, single-file tools for on-premises AI infrastructure pla
 | Tool | Description | File |
 |------|-------------|------|
 | [GPU Requirements Calculator](#gpu-requirements-calculator) | Size GPU infrastructure for on-premises AI deployments | `gpu-calculator.html` |
+| [AI Business Case Builder](#ai-business-case-builder) | Build financial business cases for AI projects with ROI, payback period, and printable PDF | `business-case-builder.html` |
 
 ---
 
@@ -225,6 +226,44 @@ ai-tools/
 ```
 
 More tools will be added to this repository over time.
+
+---
+
+---
+
+## AI Business Case Builder
+
+An offline tool for building financial business cases for AI projects. Designed for AI adoption teams presenting to management.
+
+### Quick Start
+
+**Use it instantly:** [nik1907.github.io/onprem-ai-toolkit/business-case-builder.html](https://nik1907.github.io/onprem-ai-toolkit/business-case-builder.html)
+
+Or download `business-case-builder.html` and open in any browser.
+
+### What It Does
+
+Fill in four sections — use case details, how the process works today, what impact you expect from AI, and which UAE AI Strategy goals it supports. The tool calculates ROI, payback period, staff hours saved, and 3-year net savings. Output is a printable PDF business case in English with an Arabic executive summary.
+
+### Automation vs Agentic AI Mode
+
+Toggle between two modes:
+
+**Automation mode** — for AI that replaces repetitive manual steps. Measures cost savings, FTE reduction, processing speed, and error reduction.
+
+**Agentic AI mode** — for AI agents that make decisions, handle exceptions, and orchestrate across multiple systems. Adds decision accuracy rate, autonomy rate, exception handling rate, cross-system coordination value, 24/7 availability value, and a governance framework with risk level and required oversight model.
+
+### Output
+
+- Annual benefit (AED)
+- Payback period (months)
+- 3-year ROI (%)
+- 3-year net saving (AED)
+- Savings breakdown by category
+- Strategic alignment with UAE National AI Strategy pillars
+- Plain-English "Why approve this project?" summary
+- Printable PDF with Arabic executive summary (ملخص تنفيذي)
+- Governance & risk card (Agentic mode)
 
 ---
 
