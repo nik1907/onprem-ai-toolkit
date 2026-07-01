@@ -1,4 +1,4 @@
-# AI Tools
+# On-Premises AI Toolkit
 
 A collection of offline, single-file tools for on-premises AI infrastructure planning and operations. No installation, no server, no internet connection required — download and open in any modern browser.
 
@@ -10,6 +10,7 @@ A collection of offline, single-file tools for on-premises AI infrastructure pla
 |------|-------------|------|
 | [GPU Requirements Calculator](#gpu-requirements-calculator) | Size GPU infrastructure for on-premises AI deployments | `gpu-calculator.html` |
 | [AI Business Case Builder](#ai-business-case-builder) | Build financial business cases for AI projects with ROI, payback period, and printable PDF | `business-case-builder.html` |
+| [Model Deployment Advisor](#model-deployment-advisor) | End-to-end deployment guide for open-source AI models on Kubernetes — air-gapped ready | `model-deployment-advisor.html` |
 
 ---
 
@@ -220,8 +221,11 @@ The calculator runs entirely in your browser. No data is sent to any server. API
 ## Repo Structure
 
 ```
-ai-tools/
-├── gpu-calculator.html     # On-Premises GPU Requirements Calculator
+onprem-ai-toolkit/
+├── gpu-calculator.html             # GPU Requirements Calculator
+├── business-case-builder.html      # AI Business Case Builder
+├── model-deployment-advisor.html   # Model Deployment Advisor
+├── index.html                      # Platform homepage
 └── README.md
 ```
 
@@ -264,6 +268,63 @@ Toggle between two modes:
 - Plain-English "Why approve this project?" summary
 - Printable PDF with Arabic executive summary (ملخص تنفيذي)
 - Governance & risk card (Agentic mode)
+
+---
+
+---
+
+## Model Deployment Advisor
+
+An offline deployment guide that takes you from "we have GPUs and a model name" to a fully running service on Kubernetes — covering every step an air-gapped team needs.
+
+### Quick Start
+
+**Use it instantly:** [nik1907.github.io/onprem-ai-toolkit/model-deployment-advisor.html](https://nik1907.github.io/onprem-ai-toolkit/model-deployment-advisor.html)
+
+Or download `model-deployment-advisor.html` and open in any browser.
+
+### What It Does
+
+Select your deployment goal (chat, RAG, code, STT, TTS, VLM, embedding, agentic), choose a model, and configure your GPU type, count, and Kubernetes environment. The advisor generates a complete deployment package across six tabs.
+
+### Models Covered (open source only, no API keys)
+
+| Category | Models |
+|----------|--------|
+| LLM | Llama 3.1 8B/70B, Qwen2.5 7B/72B, Mistral 7B, Phi-4, DeepSeek-R1 Distill 7B |
+| Code | Qwen2.5 Coder 7B/32B |
+| Embedding | BGE-M3 (multilingual/Arabic), BGE Large EN |
+| Reranker | BGE Reranker v2-m3 |
+| STT | Whisper Large v3, Whisper Medium |
+| TTS | Kokoro 82M, Coqui XTTS v2 |
+| VLM | Qwen2-VL 7B, Phi-4 Vision |
+
+### Output — Six Deployment Tabs
+
+**Tab 1 — Pre-Download Checklist**
+Everything to gather before going air-gapped: exact `huggingface-cli` download commands, Docker image save/load commands for the internal registry, model file list, total download size, and offline environment variable configuration.
+
+**Tab 2 — Prerequisites**
+Cluster readiness checklist with verification commands: NVIDIA driver version, CUDA compatibility, nvidia-container-toolkit, Kubernetes GPU device plugin, node labels, namespace setup, and NFS PersistentVolume configuration.
+
+**Tab 3 — Configuration**
+Exact serving command with all parameters computed from your inputs — tensor parallel size, context window, GPU memory utilisation, dtype, concurrent requests, and served model name. Includes Docker run alternative and parameter explanation.
+
+**Tab 4 — Kubernetes Manifest**
+Copy-paste ready YAML: Namespace, PersistentVolumeClaim, Deployment (with GPU resource limits, node selector, liveness/readiness probes, offline env vars), and ClusterIP Service. Adapted per model type (vLLM for LLMs, TEI for embeddings, faster-whisper for STT).
+
+**Tab 5 — Validate**
+Step-by-step test commands: health check, model list endpoint, inference test, streaming test, performance benchmark, and GPU utilisation monitoring.
+
+**Tab 6 — Troubleshoot**
+Collapsible answers to the most common deployment failures: pod stuck Pending, CUDA OOM, slow startup, low throughput, image pull errors, model not found, low GPU utilisation, driver version mismatch.
+
+### Supported Infrastructure
+
+- GPU types: RTX 4090, RTX 6000 Ada, L40S, A100 40/80 GB, H100 SXM/NVL, H200
+- Serving frameworks: vLLM (production), Ollama (dev), HuggingFace TGI, TEI (embeddings), faster-whisper (STT)
+- Deployment target: Kubernetes / Rancher with NFS storage
+- Fully air-gapped: all commands use internal registry and offline HuggingFace mode
 
 ---
 

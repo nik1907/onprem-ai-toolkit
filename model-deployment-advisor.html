@@ -1,0 +1,1298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Model Deployment Advisor</title>
+  <style>
+    :root {
+      --bg-base:#000000;--bg-panel:#0d0d0d;--bg-card:#1c1c1e;--bg-card2:#2c2c2e;--bg-input:#3a3a3c;
+      --border:rgba(255,255,255,0.08);--border-hi:rgba(255,255,255,0.13);
+      --text-hi:#f5f5f7;--text-mid:#d1d1d6;--text-dim:#a0a0a8;--text-mute:#6e6e73;
+      --accent:#30d158;--accent-dim:#25a244;--accent-lit:#4cd964;
+      --accent-tint:rgba(48,209,88,0.08);--accent-glow:rgba(48,209,88,0.22);
+      --accent-green:#30d158;--warn-amber:#ff9f0a;--warn-purple:#bf5af2;
+      --warn-red:#ff453a;--warn-blue:#64d2ff;
+      --r-sm:8px;--r-md:10px;--r-lg:14px;--r-xl:18px;--r-pill:980px;
+      --shadow-sm:0 2px 8px rgba(0,0,0,0.45);--shadow-md:0 8px 32px rgba(0,0,0,0.55);
+    }
+    body.light{
+      --bg-base:#f5f5f7;--bg-panel:#ebebf0;--bg-card:#ffffff;--bg-card2:#f0f0f5;--bg-input:#e5e5ea;
+      --border:rgba(0,0,0,0.08);--border-hi:rgba(0,0,0,0.14);
+      --text-hi:#1d1d1f;--text-mid:#3a3a3c;--text-dim:#6e6e73;--text-mute:#8e8e93;
+      --accent:#1d8a3c;--accent-dim:#166c2e;--accent-lit:#25a244;
+      --accent-tint:rgba(29,138,60,0.08);--accent-glow:rgba(29,138,60,0.18);
+      --accent-green:#1d8a3c;--shadow-sm:0 2px 8px rgba(0,0,0,0.10);--shadow-md:0 8px 32px rgba(0,0,0,0.14);
+    }
+    body.light .app-header{background:rgba(245,245,247,0.88);}
+    body.light .mode-btn.active{background:#1d1d1f;color:#fff;}
+    body.light .code-block{background:#1c1c1e;color:#e5e5ea;}
+    body.light .checklist-item{border-bottom-color:rgba(0,0,0,0.06);}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--bg-base);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",sans-serif;
+      color:var(--text-mid);font-size:13px;line-height:1.5;height:100vh;overflow:hidden;display:flex;flex-direction:column;}
+    .app-header{background:rgba(28,28,30,0.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+      border-bottom:1px solid var(--border);padding:0 24px;height:56px;display:flex;align-items:center;gap:14px;flex-shrink:0;}
+    .app-logo{width:32px;height:32px;background:linear-gradient(135deg,var(--accent),var(--accent-dim));
+      border-radius:var(--r-md);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;letter-spacing:0.5px;flex-shrink:0;}
+    .app-header h1{font-size:15px;font-weight:700;color:var(--text-hi);white-space:nowrap;letter-spacing:-0.2px;}
+    .app-tagline{font-size:11px;color:var(--text-mute);white-space:nowrap;}
+    .hdr-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+    .btn-hdr{background:transparent;color:var(--text-dim);border:1px solid var(--border-hi);border-radius:var(--r-pill);
+      padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap;}
+    .btn-hdr:hover{border-color:var(--accent);color:var(--accent);}
+    .btn-theme{background:transparent;border:1px solid var(--border-hi);border-radius:var(--r-pill);
+      padding:6px 12px;font-size:12px;color:var(--text-dim);cursor:pointer;transition:all .2s;}
+    .btn-theme:hover{border-color:var(--accent);color:var(--accent);}
+    .split{display:flex;flex:1;overflow:hidden;}
+    .left{width:380px;min-width:340px;background:var(--bg-panel);border-right:1px solid var(--border);
+      overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;
+      scrollbar-width:thin;scrollbar-color:var(--border-hi) transparent;}
+    .left::-webkit-scrollbar{width:4px;}
+    .left::-webkit-scrollbar-thumb{background:var(--bg-card2);border-radius:2px;}
+    .right{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:0;
+      background:var(--bg-base);min-width:0;scrollbar-width:thin;scrollbar-color:var(--bg-card2) transparent;}
+    .right::-webkit-scrollbar{width:4px;}
+    .right::-webkit-scrollbar-thumb{background:var(--bg-card2);border-radius:2px;}
+    .card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-xl);padding:14px 16px;box-shadow:var(--shadow-sm);}
+    .card-title{font-size:10px;font-weight:700;color:var(--text-mute);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;}
+    .field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px;}
+    .field:last-child{margin-bottom:0;}
+    .field label{font-size:11px;font-weight:600;color:var(--text-dim);}
+    .sinp{width:100%;background:var(--bg-input);border:1px solid var(--border-hi);border-radius:var(--r-md);
+      padding:8px 10px;font-size:13px;color:var(--text-hi);outline:none;transition:border-color .15s;-webkit-appearance:none;}
+    .sinp:focus{border-color:var(--accent);}
+    .sinp option{background:#1c1c1e;}
+    .ninp{width:100%;background:var(--bg-input);border:1px solid var(--border-hi);border-radius:var(--r-md);
+      padding:8px 10px;font-size:13px;color:var(--text-hi);outline:none;}
+    .ninp:focus{border-color:var(--accent);}
+    .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+    .badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:var(--r-pill);font-size:10px;font-weight:700;}
+    .badge-green{background:rgba(48,209,88,0.12);color:var(--accent);}
+    .badge-amber{background:rgba(255,159,10,0.12);color:var(--warn-amber);}
+    .badge-red{background:rgba(255,69,58,0.12);color:var(--warn-red);}
+    .badge-blue{background:rgba(100,210,255,0.12);color:var(--warn-blue);}
+    .badge-purple{background:rgba(191,90,242,0.12);color:var(--warn-purple);}
+    .model-info-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);}
+    .model-info-row:last-child{border-bottom:none;}
+    .mi-label{font-size:11px;color:var(--text-mute);}
+    .mi-val{font-size:12px;font-weight:600;color:var(--text-hi);}
+    .warn-box{border-radius:var(--r-lg);padding:10px 12px;font-size:12px;margin-bottom:8px;line-height:1.5;}
+    .warn-box.amber{background:rgba(255,159,10,0.08);border:1px solid rgba(255,159,10,0.2);color:var(--warn-amber);}
+    .warn-box.red{background:rgba(255,69,58,0.08);border:1px solid rgba(255,69,58,0.2);color:var(--warn-red);}
+    .warn-box.blue{background:rgba(100,210,255,0.08);border:1px solid rgba(100,210,255,0.2);color:var(--warn-blue);}
+    .warn-box.green{background:rgba(48,209,88,0.08);border:1px solid rgba(48,209,88,0.2);color:var(--accent);}
+    /* Tabs */
+    .tab-bar{display:flex;gap:4px;padding:0 0 12px 0;flex-wrap:wrap;}
+    .tab-btn{padding:7px 14px;border-radius:var(--r-pill);border:1px solid var(--border-hi);
+      background:transparent;color:var(--text-mute);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap;}
+    .tab-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+    .tab-btn:not(.active):hover{border-color:var(--accent);color:var(--accent);}
+    .tab-panel{display:none;}
+    .tab-panel.active{display:block;}
+    /* Result cards */
+    .rcard{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-xl);padding:16px 18px;
+      box-shadow:var(--shadow-sm);margin-bottom:12px;}
+    .rcard-title{font-size:10px;font-weight:700;color:var(--text-mute);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;}
+    /* Code blocks */
+    .code-wrap{position:relative;margin:4px 0;}
+    .code-block{background:#0d0d0d;border:1px solid var(--border-hi);border-radius:var(--r-lg);
+      padding:14px 16px;font-family:"SF Mono","Fira Code","Fira Mono","Cascadia Code",Consolas,monospace;
+      font-size:11.5px;line-height:1.7;color:#e5e5ea;overflow-x:auto;white-space:pre;
+      scrollbar-width:thin;scrollbar-color:var(--border-hi) transparent;}
+    .code-block::-webkit-scrollbar{height:4px;}
+    .code-block::-webkit-scrollbar-thumb{background:var(--bg-card2);border-radius:2px;}
+    .btn-copy{position:absolute;top:8px;right:8px;background:var(--bg-card2);border:1px solid var(--border-hi);
+      border-radius:var(--r-sm);padding:4px 10px;font-size:11px;font-weight:600;color:var(--text-dim);
+      cursor:pointer;transition:all .2s;}
+    .btn-copy:hover{border-color:var(--accent);color:var(--accent);}
+    .btn-copy.copied{background:var(--accent);border-color:var(--accent);color:#fff;}
+    /* Checklist */
+    .checklist{list-style:none;padding:0;margin:0;}
+    .checklist-item{padding:10px 0;border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:flex-start;}
+    .checklist-item:last-child{border-bottom:none;}
+    .ci-num{width:22px;height:22px;border-radius:50%;background:var(--accent-tint);border:1px solid var(--accent);
+      color:var(--accent);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+    .ci-body{flex:1;min-width:0;}
+    .ci-title{font-size:13px;font-weight:600;color:var(--text-hi);margin-bottom:4px;}
+    .ci-desc{font-size:12px;color:var(--text-dim);line-height:1.6;}
+    .ci-warn{font-size:11px;color:var(--warn-amber);margin-top:4px;}
+    /* Prereq table */
+    .prereq-row{display:flex;align-items:flex-start;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);gap:12px;}
+    .prereq-row:last-child{border-bottom:none;}
+    .pr-label{font-size:12px;color:var(--text-mute);min-width:130px;}
+    .pr-val{font-size:12px;font-weight:600;color:var(--text-hi);text-align:right;}
+    .pr-cmd{font-family:"SF Mono",Consolas,monospace;font-size:11px;color:var(--accent);background:var(--accent-tint);
+      border-radius:var(--r-sm);padding:2px 6px;display:inline-block;margin-top:2px;}
+    /* Troubleshoot accordion */
+    .ts-item{border-bottom:1px solid var(--border);}
+    .ts-item:last-child{border-bottom:none;}
+    .ts-q{padding:10px 0;cursor:pointer;font-size:13px;font-weight:600;color:var(--text-hi);
+      display:flex;align-items:center;justify-content:space-between;}
+    .ts-q:hover{color:var(--accent);}
+    .ts-arrow{font-size:11px;color:var(--text-mute);transition:transform .2s;flex-shrink:0;}
+    .ts-item.open .ts-arrow{transform:rotate(90deg);}
+    .ts-a{display:none;padding:0 0 12px 0;font-size:12px;color:var(--text-dim);line-height:1.7;}
+    .ts-item.open .ts-a{display:block;}
+    /* Summary boxes */
+    .sum-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;}
+    .sum-box{background:var(--bg-input);border:1px solid var(--border-hi);border-radius:var(--r-md);padding:10px 12px;text-align:center;}
+    .sum-v{font-size:20px;font-weight:700;color:var(--text-hi);line-height:1;}
+    .sum-v.green{color:var(--accent);}
+    .sum-v.amber{color:var(--warn-amber);}
+    .sum-v.red{color:var(--warn-red);}
+    .sum-l{font-size:10px;color:var(--text-mute);margin-top:4px;}
+    /* Empty state */
+    .empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;
+      height:100%;text-align:center;padding:40px;gap:12px;}
+    .empty-icon{width:56px;height:56px;border-radius:16px;background:var(--accent-tint);border:1px solid var(--accent);
+      display:flex;align-items:center;justify-content:center;font-size:24px;}
+    .empty-title{font-size:17px;font-weight:700;color:var(--text-hi);}
+    .empty-desc{font-size:13px;color:var(--text-mute);max-width:320px;line-height:1.6;}
+    .app-footer{padding:10px 24px;background:var(--bg-panel);border-top:1px solid var(--border);
+      font-size:11px;color:var(--text-mute);display:flex;align-items:center;gap:16px;flex-shrink:0;}
+    .app-footer a{color:var(--accent);text-decoration:none;}
+    /* Nav links */
+    .nav-link{font-size:11px;color:var(--text-mute);text-decoration:none;transition:color .15s;}
+    .nav-link:hover{color:var(--accent);}
+    /* Responsive */
+    @media(max-width:900px){
+      .split{flex-direction:column;overflow:visible;}
+      body{height:auto;overflow:auto;}
+      .left{width:100%;min-width:unset;border-right:none;border-bottom:1px solid var(--border);}
+      .right{padding:12px;}
+      .sum-grid{grid-template-columns:repeat(3,1fr);}
+      .app-tagline{display:none;}
+    }
+    @media(max-width:540px){
+      .app-header{padding:0 14px;gap:8px;}
+      .app-header h1{font-size:13px;}
+      .hdr-right{gap:6px;}
+      .btn-hdr{padding:5px 8px;font-size:11px;}
+      .sum-grid{grid-template-columns:repeat(2,1fr);}
+      .tab-btn{padding:6px 10px;font-size:11px;}
+    }
+  </style>
+</head>
+<body>
+<header class="app-header">
+  <div class="app-logo">DA</div>
+  <h1>AI Model Deployment Advisor</h1>
+  <span class="app-tagline">Open-source · Air-gapped · Kubernetes ready</span>
+  <div class="hdr-right">
+    <a href="gpu-calculator.html" class="nav-link">GPU Calculator</a>
+    <a href="business-case-builder.html" class="nav-link">Business Case</a>
+    <a href="index.html" class="nav-link">All Tools</a>
+    <button class="btn-theme" onclick="toggleTheme()" id="theme-btn">Light</button>
+  </div>
+</header>
+
+<div class="split">
+  <!-- LEFT PANEL -->
+  <div class="left">
+
+    <div class="card">
+      <div class="card-title">Use Case &amp; Model</div>
+      <div class="field">
+        <label for="inp-usecase">Deployment goal</label>
+        <select class="sinp" id="inp-usecase" onchange="onUseCaseChange()">
+          <option value="chat">Chat / Q&amp;A assistant</option>
+          <option value="rag">RAG / Document search</option>
+          <option value="code">Code assistant</option>
+          <option value="stt">Speech-to-Text (STT)</option>
+          <option value="tts">Text-to-Speech (TTS)</option>
+          <option value="vlm">Image / Document understanding (VLM)</option>
+          <option value="search">Semantic search / Embedding</option>
+          <option value="agent">Agentic AI orchestrator</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="inp-model">Model (open source only)</label>
+        <select class="sinp" id="inp-model" onchange="generate()"></select>
+      </div>
+      <div class="field">
+        <label for="inp-quant">Precision / Quantization</label>
+        <select class="sinp" id="inp-quant" onchange="generate()">
+          <option value="fp16">FP16 / BF16 — best quality</option>
+          <option value="int8">INT8 — half VRAM, ~1% quality loss</option>
+          <option value="int4">INT4 — quarter VRAM, moderate quality loss</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Infrastructure</div>
+      <div class="field">
+        <label for="inp-gpu">GPU type</label>
+        <select class="sinp" id="inp-gpu" onchange="generate()">
+          <option value="rtx4090">NVIDIA RTX 4090 (24 GB)</option>
+          <option value="rtx6000">NVIDIA RTX 6000 Ada (48 GB)</option>
+          <option value="l40s">NVIDIA L40S (48 GB)</option>
+          <option value="a100-40">NVIDIA A100 40 GB</option>
+          <option value="a100-80" selected>NVIDIA A100 80 GB</option>
+          <option value="h100-sxm">NVIDIA H100 SXM (80 GB)</option>
+          <option value="h100-nvl">NVIDIA H100 NVL (94 GB)</option>
+          <option value="h200">NVIDIA H200 (141 GB)</option>
+        </select>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="inp-gpucount">GPUs available</label>
+          <input type="number" class="ninp" id="inp-gpucount" value="2" min="1" max="16" oninput="generate()">
+        </div>
+        <div class="field">
+          <label for="inp-maxseqs">Max concurrent requests</label>
+          <input type="number" class="ninp" id="inp-maxseqs" value="10" min="1" max="200" oninput="generate()">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Context &amp; Serving</div>
+      <div class="field">
+        <label for="inp-ctx">Context window (tokens)</label>
+        <select class="sinp" id="inp-ctx" onchange="generate()">
+          <option value="4096">4 096 — short conversations</option>
+          <option value="8192" selected>8 192 — standard</option>
+          <option value="16384">16 384 — long documents</option>
+          <option value="32768">32 768 — very long context</option>
+          <option value="65536">65 536 — extended (use cautiously)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="inp-framework">Serving framework</label>
+        <select class="sinp" id="inp-framework" onchange="generate()">
+          <option value="vllm">vLLM — production (recommended)</option>
+          <option value="ollama">Ollama — development / low traffic</option>
+          <option value="tgi">HuggingFace TGI — alternative</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Environment</div>
+      <div class="field">
+        <label for="inp-namespace">Kubernetes namespace</label>
+        <input type="text" class="ninp" id="inp-namespace" value="ai-workloads" oninput="generate()">
+      </div>
+      <div class="field">
+        <label for="inp-storepath">Model storage path (NFS/PV)</label>
+        <input type="text" class="ninp" id="inp-storepath" value="/mnt/ai-models" oninput="generate()">
+      </div>
+      <div class="field">
+        <label for="inp-registry">Internal container registry</label>
+        <input type="text" class="ninp" id="inp-registry" value="registry.internal:5000" oninput="generate()">
+      </div>
+    </div>
+
+  </div><!-- /left -->
+
+  <!-- RIGHT PANEL -->
+  <div class="right" id="right-panel">
+
+    <div class="empty-state" id="empty-state">
+      <div class="empty-icon">&#9881;</div>
+      <div class="empty-title">Select a use case and model</div>
+      <div class="empty-desc">Choose your deployment goal and model on the left. The advisor will generate your complete deployment package — download checklist, prerequisites, vLLM configuration, Kubernetes manifest, and test commands.</div>
+    </div>
+
+    <div id="results-area" style="display:none;">
+
+      <!-- Summary strip -->
+      <div class="rcard" id="card-summary">
+        <div class="rcard-title">Deployment Overview</div>
+        <div class="sum-grid" id="sum-grid"></div>
+        <div id="sum-warnings"></div>
+        <div id="sum-notes" style="font-size:12px;color:var(--text-dim);line-height:1.6;margin-top:6px;"></div>
+      </div>
+
+      <!-- Tab bar -->
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab('download',this)">1 · Pre-Download</button>
+        <button class="tab-btn" onclick="switchTab('prereqs',this)">2 · Prerequisites</button>
+        <button class="tab-btn" onclick="switchTab('config',this)">3 · Configuration</button>
+        <button class="tab-btn" onclick="switchTab('k8s',this)">4 · K8s Manifest</button>
+        <button class="tab-btn" onclick="switchTab('validate',this)">5 · Validate</button>
+        <button class="tab-btn" onclick="switchTab('troubleshoot',this)">6 · Troubleshoot</button>
+      </div>
+
+      <!-- Tab panels -->
+      <div id="tab-download" class="tab-panel active">
+        <div class="rcard">
+          <div class="rcard-title">Pre-Download Checklist — do these before going air-gapped</div>
+          <ol class="checklist" id="dl-list"></ol>
+        </div>
+      </div>
+
+      <div id="tab-prereqs" class="tab-panel">
+        <div class="rcard">
+          <div class="rcard-title">Cluster Prerequisites</div>
+          <div id="prereq-content"></div>
+        </div>
+      </div>
+
+      <div id="tab-config" class="tab-panel">
+        <div class="rcard">
+          <div class="rcard-title">Serving Configuration</div>
+          <div id="config-content"></div>
+        </div>
+      </div>
+
+      <div id="tab-k8s" class="tab-panel">
+        <div class="rcard">
+          <div class="rcard-title">Kubernetes Manifest — copy and apply with kubectl</div>
+          <div id="k8s-content"></div>
+        </div>
+      </div>
+
+      <div id="tab-validate" class="tab-panel">
+        <div class="rcard">
+          <div class="rcard-title">Validate &amp; Test</div>
+          <div id="validate-content"></div>
+        </div>
+      </div>
+
+      <div id="tab-troubleshoot" class="tab-panel">
+        <div class="rcard">
+          <div class="rcard-title">Troubleshooting Guide</div>
+          <div id="troubleshoot-content"></div>
+        </div>
+      </div>
+
+    </div><!-- /results-area -->
+  </div><!-- /right -->
+</div><!-- /split -->
+
+<footer class="app-footer">
+  <span>On-Premises AI Toolkit &mdash; open source, air-gapped ready</span>
+  <a href="mailto:gnikki.reddy@gmail.com">Need help deploying? Get in touch</a>
+</footer>
+
+<script>
+/* ═══════════════════════════════════════
+   DATA
+═══════════════════════════════════════ */
+var GPUS = {
+  'rtx4090':  { name:'RTX 4090',      vram:24,  tdp:450,  arch:'Ada',    cudaMin:'12.0', driverMin:'525' },
+  'rtx6000':  { name:'RTX 6000 Ada',  vram:48,  tdp:300,  arch:'Ada',    cudaMin:'12.0', driverMin:'525' },
+  'l40s':     { name:'L40S',          vram:48,  tdp:350,  arch:'Ada',    cudaMin:'12.0', driverMin:'525' },
+  'a100-40':  { name:'A100 40 GB',    vram:40,  tdp:400,  arch:'Ampere', cudaMin:'11.8', driverMin:'520' },
+  'a100-80':  { name:'A100 80 GB',    vram:80,  tdp:400,  arch:'Ampere', cudaMin:'11.8', driverMin:'520' },
+  'h100-sxm': { name:'H100 SXM',      vram:80,  tdp:700,  arch:'Hopper', cudaMin:'12.1', driverMin:'530' },
+  'h100-nvl': { name:'H100 NVL',      vram:94,  tdp:400,  arch:'Hopper', cudaMin:'12.1', driverMin:'530' },
+  'h200':     { name:'H200 SXM',      vram:141, tdp:700,  arch:'Hopper', cudaMin:'12.3', driverMin:'545' },
+};
+
+var MODELS = {
+  // ── LLM ──
+  'llama31-8b': {
+    name:'Llama 3.1 8B Instruct', params:'8B', hfId:'meta-llama/Meta-Llama-3.1-8B-Instruct',
+    cat:'llm', uses:['chat','rag','agent'],
+    sizeGB:{fp16:16,int8:8,int4:4.5}, minVRAM:{fp16:18,int8:10,int4:6},
+    license:'Llama 3 Community License', requiresAuth:true,
+    authNote:'Must accept Meta license at huggingface.co/meta-llama/Meta-Llama-3.1-8B-Instruct before download',
+    maxCtx:131072, defaultCtx:8192, arabic:true,
+    frameworks:['vllm','ollama','tgi'], ollamaTag:'llama3.1:8b', vllmDtype:'bfloat16',
+    dockerImg:'vllm/vllm-openai:v0.6.4.post1',
+    shards:'4 safetensor shards', downloadFiles:['model-0000{1-4}-of-00004.safetensors','config.json','tokenizer.json','tokenizer_config.json','generation_config.json'],
+    benchTPS:{a100:'120–180',h100:'200–320'}, benchUnit:'tok/s',
+    notes:'Best general-purpose 8B for Arabic + English. Strong at RAG, chat, agent tasks.'
+  },
+  'llama31-70b': {
+    name:'Llama 3.1 70B Instruct', params:'70B', hfId:'meta-llama/Meta-Llama-3.1-70B-Instruct',
+    cat:'llm', uses:['chat','rag','agent'],
+    sizeGB:{fp16:140,int8:70,int4:40}, minVRAM:{fp16:155,int8:78,int4:45},
+    license:'Llama 3 Community License', requiresAuth:true,
+    authNote:'Must accept Meta license at huggingface.co/meta-llama/Meta-Llama-3.1-70B-Instruct before download',
+    maxCtx:131072, defaultCtx:8192, arabic:true,
+    frameworks:['vllm','tgi'], ollamaTag:'llama3.1:70b', vllmDtype:'bfloat16',
+    dockerImg:'vllm/vllm-openai:v0.6.4.post1',
+    shards:'16 safetensor shards', downloadFiles:['model-0000{1-16}-of-00016.safetensors','config.json','tokenizer.json','tokenizer_config.json','generation_config.json'],
+    benchTPS:{a100:'30–50',h100:'60–90'}, benchUnit:'tok/s',
+    notes:'Flagship open LLM. Needs tensor parallelism across multiple GPUs. Best quality for complex tasks.'
+  },
+  'qwen25-7b': {
+    name:'Qwen2.5 7B Instruct', params:'7B', hfId:'Qwen/Qwen2.5-7B-Instruct',
+    cat:'llm', uses:['chat','rag','agent'],
+    sizeGB:{fp16:15,int8:7.5,int4:4.3}, minVRAM:{fp16:17,int8:9.5,int4:6},
+    license:'Apache 2.0', requiresAuth:false,
+    maxCtx:131072, defaultCtx:8192, arabic:true,
+    frameworks:['vllm','ollama','tgi'], ollamaTag:'qwen2.5:7b', vllmDtype:'bfloat16',
+    dockerImg:'vllm/vllm-openai:v0.6.4.post1',
+    shards:'4 safetensor shards', downloadFiles:['model-0000{1-4}-of-00004.safetensors','config.json','tokenizer.json','tokenizer_config.json'],
+    benchTPS:{a100:'130–200',h100:'220–340'}, benchUnit:'tok/s',
+    notes:'Apache 2.0 — no license agreement. Excellent Arabic + English. Best fit for government use.'
+  },
+  'qwen25-72b': {
+    name:'Qwen2.5 72B Instruct', params:'72B', hfId:'Qwen/Qwen2.5-72B-Instruct',
+    cat:'llm', uses:['chat','rag','agent'],
+    sizeGB:{fp16:144,int8:72,int4:41}, minVRAM:{fp16:160,int8:80,int4:46},
+    license:'Qwen License (commercial allowed)', requiresAuth:false,
+    maxCtx:131072, defaultCtx:8192, arabic:true,
+    frameworks:['vllm','tgi'], ollamaTag:'qwen2.5:72b', vllmDtype:'bfloat16',
+    dockerImg:'vllm/vllm-openai:v0.6.4.post1',
+    shards:'16 safetensor shards', downloadFiles:['model-0000{1-16}-of-00016.safetensors','config.json','tokenizer.json','tokenizer_config.json'],
+    benchTPS:{a100:'28–45',h100:'55–85'}, benchUnit:'tok/s',
+    notes:'Best 72B class for Arabic. Needs tensor parallelism. Strong reasoning and instruction following.'
+  },
+  'mistral-7b': {
+    name:'Mistral 7B Instruct v0.3', params:'7B', hfId:'mistralai/Mistral-7B-Instruct-v0.3',
+    cat:'llm', uses:['chat','rag'],
+    sizeGB:{fp16:14.5,int8:7.2,int4:4.1}, minVRAM:{fp16:16.5,int8:9,int4:5.5},
+    license:'Apache 2.0', requiresAuth:false,
+    maxCtx:32768, defaultCtx:8192, arabic:false,
+    frameworks:['vllm','ollama','tgi'], ollamaTag:'mistral:7b', vllmDtype:'bfloat16',
+    dockerImg:'vllm/vllm-openai:v0.6.4.post1',
+    shards:'1 safetensor file', downloadFiles:['model.safetensors','config.json','tokenizer.json','tokenizer.model.v3','tokenizer_config.json'],
+    benchTPS:{a100:'140–210',h100:'230–360'}, benchUnit:'tok/s',
+    notes:'Fast, efficient English LLM. Apache 2.0. Best for English-only workloads where speed matters.'
+  },
+  'phi4': {
+    name:'Phi-4 14B', params:'14B', hfId:'microsoft/phi-4',
+    cat:'llm', uses:['chat','code','rag'],
+    sizeGB:{fp16:28,int8:14,int4:8}, minVRAM:{fp16:31,int8:16,int4:10},
+    license:'MIT', requiresAuth:false,
+    maxCtx:16384, defaultCtx:8192, arabic:false,
+    frameworks:['vllm','ollama'], ollamaTag:'phi4', vllmDtype:'bfloat16',
+    dockerImg:'vllm/vllm-openai:v0.6.4.post1',
+    shards:'6 safetensor shards', downloadFiles:['model-0000{1-6}-of-00006.safetensors','config.json','tokenizer.json','tokenizer_config.json'],
+    benchTPS:{a100:'80–130',h100:'140–220'}, benchUnit:'tok/s',
+    notes:'MIT license. Punches above weight — 14B with near-70B quality on reasoning. Strong coding.'
+  },
+  'deepseek-r1-7b': {
+    name:'DeepSeek-R1 Distill 7B', params:'7B', hfId:'deepseek-ai/DeepSeek-R1-Distill-Qwen-7B',
+    cat:'llm', uses:['chat','code'],
+    sizeGB:{fp16:15,int8:7.5,int4:4.3}, minVRAM:{fp16:17,int8:9.5,int4:6},
+    license:'MIT', requiresAuth:false,
+    maxCtx:131072, defaultCtx:8192, arabic:false,
+    frameworks:['vllm','ollama'], ollamaTag:'deepseek-r1:7b', vllmDtype:'bfloat16',
+    dockerImg:'vllm/vllm-openai:v0.6.4.post1',
+    shards:'4 safetensor shards', downloadFiles:['model-0000{1-4}-of-00004.safetensors','config.json','tokenizer.json'],
+    benchTPS:{a100:'120–180',h100:'200–310'}, benchUnit:'tok/s',
+    notes:'MIT license. Chain-of-thought reasoning. Best open model for math and logic tasks.'
+  },
+  'qwen25-coder-7b': {
+    name:'Qwen2.5 Coder 7B Instruct', params:'7B', hfId:'Qwen/Qwen2.5-Coder-7B-Instruct',
+    cat:'llm', uses:['code'],
+    sizeGB:{fp16:15,int8:7.5,int4:4.3}, minVRAM:{fp16:17,int8:9.5,int4:6},
+    license:'Apache 2.0', requiresAuth:false,
+    maxCtx:131072, defaultCtx:8192, arabic:false,
+    frameworks:['vllm','ollama','tgi'], ollamaTag:'qwen2.5-coder:7b', vllmDtype:'bfloat16',
+    dockerImg:'vllm/vllm-openai:v0.6.4.post1',
+    shards:'4 safetensor shards', downloadFiles:['model-0000{1-4}-of-00004.safetensors','config.json','tokenizer.json'],
+    benchTPS:{a100:'130–200',h100:'220–340'}, benchUnit:'tok/s',
+    notes:'Apache 2.0. Best 7B code model. Supports 92 programming languages.'
+  },
+  'qwen25-coder-32b': {
+    name:'Qwen2.5 Coder 32B Instruct', params:'32B', hfId:'Qwen/Qwen2.5-Coder-32B-Instruct',
+    cat:'llm', uses:['code'],
+    sizeGB:{fp16:64,int8:32,int4:18}, minVRAM:{fp16:70,int8:36,int4:22},
+    license:'Apache 2.0', requiresAuth:false,
+    maxCtx:131072, defaultCtx:8192, arabic:false,
+    frameworks:['vllm','tgi'], ollamaTag:'qwen2.5-coder:32b', vllmDtype:'bfloat16',
+    dockerImg:'vllm/vllm-openai:v0.6.4.post1',
+    shards:'8 safetensor shards', downloadFiles:['model-0000{1-8}-of-00008.safetensors','config.json','tokenizer.json'],
+    benchTPS:{a100:'55–85',h100:'95–150'}, benchUnit:'tok/s',
+    notes:'Apache 2.0. Top open-source code model overall. Matches GPT-4o on HumanEval.'
+  },
+  // ── Embedding ──
+  'bge-m3': {
+    name:'BGE-M3 (Multilingual)', params:'570M', hfId:'BAAI/bge-m3',
+    cat:'embedding', uses:['rag','search'],
+    sizeGB:{fp16:1.1,int8:0.6,int4:0.3}, minVRAM:{fp16:2.5,int8:2,int4:1.5},
+    license:'MIT', requiresAuth:false,
+    maxCtx:8192, defaultCtx:8192, arabic:true,
+    frameworks:['tei','sentence-transformers'], ollamaTag:null, vllmDtype:null,
+    dockerImg:'ghcr.io/huggingface/text-embeddings-inference:1.5',
+    shards:'1 model file', downloadFiles:['model.safetensors','config.json','tokenizer.json','tokenizer_config.json','sentencepiece.bpe.model'],
+    benchTPS:{a100:'3000–5000',h100:'6000–10000'}, benchUnit:'tok/s',
+    servePort:8001,
+    notes:'MIT. Best multilingual embedding. Strong Arabic. Supports dense + sparse + colbert retrieval.'
+  },
+  'bge-large-en': {
+    name:'BGE Large EN v1.5', params:'335M', hfId:'BAAI/bge-large-en-v1.5',
+    cat:'embedding', uses:['rag','search'],
+    sizeGB:{fp16:0.7,int8:0.35,int4:0.2}, minVRAM:{fp16:2,int8:1.5,int4:1},
+    license:'MIT', requiresAuth:false,
+    maxCtx:512, defaultCtx:512, arabic:false,
+    frameworks:['tei','sentence-transformers'], ollamaTag:null, vllmDtype:null,
+    dockerImg:'ghcr.io/huggingface/text-embeddings-inference:1.5',
+    shards:'1 model file', downloadFiles:['pytorch_model.bin','config.json','tokenizer.json','tokenizer_config.json'],
+    benchTPS:{a100:'6000–10000',h100:'12000–18000'}, benchUnit:'tok/s',
+    servePort:8001,
+    notes:'MIT. Best English embedding. Extremely fast. Use when only English content.'
+  },
+  'bge-reranker-v2': {
+    name:'BGE Reranker v2-m3', params:'568M', hfId:'BAAI/bge-reranker-v2-m3',
+    cat:'reranker', uses:['rag','search'],
+    sizeGB:{fp16:1.1,int8:0.6,int4:0.3}, minVRAM:{fp16:2.5,int8:2,int4:1.5},
+    license:'MIT', requiresAuth:false,
+    maxCtx:8192, defaultCtx:512, arabic:true,
+    frameworks:['tei','sentence-transformers'], ollamaTag:null, vllmDtype:null,
+    dockerImg:'ghcr.io/huggingface/text-embeddings-inference:1.5',
+    shards:'1 model file', downloadFiles:['model.safetensors','config.json','tokenizer.json','tokenizer_config.json','sentencepiece.bpe.model'],
+    benchTPS:{a100:'800–1500',h100:'1500–3000'}, benchUnit:'pairs/s',
+    servePort:8004,
+    notes:'MIT. Best multilingual reranker. Pairs with BGE-M3 to improve RAG precision.'
+  },
+  // ── STT ──
+  'whisper-large-v3': {
+    name:'Whisper Large v3', params:'1.5B', hfId:'openai/whisper-large-v3',
+    cat:'stt', uses:['stt'],
+    sizeGB:{fp16:3.0,int8:1.5,int4:0.8}, minVRAM:{fp16:4.5,int8:3,int4:2},
+    license:'MIT', requiresAuth:false,
+    maxCtx:30, defaultCtx:30, arabic:true,
+    frameworks:['faster-whisper','transformers'], ollamaTag:null, vllmDtype:null,
+    dockerImg:'fedirz/faster-whisper-server:latest-cuda',
+    shards:'1 model file', downloadFiles:['model.safetensors','config.json','tokenizer.json','preprocessor_config.json','vocab.json','merges.txt'],
+    benchTPS:{a100:'100–200x realtime',h100:'200–400x realtime'}, benchUnit:'',
+    servePort:8002,
+    notes:'MIT. Best open STT. Excellent Arabic transcription. Use faster-whisper server for 4x speed.'
+  },
+  'whisper-medium': {
+    name:'Whisper Medium', params:'307M', hfId:'openai/whisper-medium',
+    cat:'stt', uses:['stt'],
+    sizeGB:{fp16:1.5,int8:0.75,int4:0.4}, minVRAM:{fp16:3,int8:2,int4:1.5},
+    license:'MIT', requiresAuth:false,
+    maxCtx:30, defaultCtx:30, arabic:true,
+    frameworks:['faster-whisper','transformers'], ollamaTag:null, vllmDtype:null,
+    dockerImg:'fedirz/faster-whisper-server:latest-cuda',
+    shards:'1 model file', downloadFiles:['model.safetensors','config.json','tokenizer.json','preprocessor_config.json'],
+    benchTPS:{a100:'300–500x realtime',h100:'500–900x realtime'}, benchUnit:'',
+    servePort:8002,
+    notes:'MIT. Good Arabic, 2x faster than large-v3. Use when VRAM or throughput is constrained.'
+  },
+  // ── TTS ──
+  'kokoro-82m': {
+    name:'Kokoro 82M', params:'82M', hfId:'hexgrad/Kokoro-82M',
+    cat:'tts', uses:['tts'],
+    sizeGB:{fp16:0.33,int8:0.2,int4:0.1}, minVRAM:{fp16:1.0,int8:0.8,int4:0.6},
+    license:'Apache 2.0', requiresAuth:false,
+    maxCtx:10000, defaultCtx:1000, arabic:false,
+    frameworks:['kokoro-fastapi'], ollamaTag:null, vllmDtype:null,
+    dockerImg:'ghcr.io/remsky/kokoro-fastapi-gpu:latest',
+    shards:'1 model file', downloadFiles:['kokoro-v1_0.pth','config.json','voices/'],
+    benchTPS:{a100:'50–100x realtime',h100:'100–200x realtime'}, benchUnit:'',
+    servePort:8003,
+    notes:'Apache 2.0. Tiny but high quality. English only. Very low VRAM. Best for voice notifications and summaries.'
+  },
+  'xtts-v2': {
+    name:'Coqui XTTS v2', params:'467M', hfId:'coqui/XTTS-v2',
+    cat:'tts', uses:['tts'],
+    sizeGB:{fp16:1.9,int8:1.0,int4:0.5}, minVRAM:{fp16:3.5,int8:2.5,int4:1.8},
+    license:'CPML (non-commercial)', requiresAuth:false,
+    maxCtx:10000, defaultCtx:1000, arabic:false,
+    frameworks:['coqui-tts'], ollamaTag:null, vllmDtype:null,
+    dockerImg:'ghcr.io/coqui-ai/tts:latest',
+    shards:'1 model file', downloadFiles:['model.pth','config.json','vocab.json','speakers_xtts.pth'],
+    benchTPS:{a100:'20–40x realtime',h100:'40–80x realtime'}, benchUnit:'',
+    servePort:8003,
+    notes:'Voice cloning from 3 seconds of audio. 17 languages (not Arabic). Check CPML for commercial use.'
+  },
+  // ── VLM ──
+  'qwen2-vl-7b': {
+    name:'Qwen2-VL 7B Instruct', params:'7B', hfId:'Qwen/Qwen2-VL-7B-Instruct',
+    cat:'vlm', uses:['vlm','rag'],
+    sizeGB:{fp16:16,int8:8,int4:4.5}, minVRAM:{fp16:20,int8:12,int4:8},
+    license:'Apache 2.0', requiresAuth:false,
+    maxCtx:32768, defaultCtx:8192, arabic:true,
+    frameworks:['vllm','ollama'], ollamaTag:'qwen2-vl:7b', vllmDtype:'bfloat16',
+    dockerImg:'vllm/vllm-openai:v0.6.4.post1',
+    shards:'4 safetensor shards', downloadFiles:['model-0000{1-4}-of-00004.safetensors','config.json','preprocessor_config.json','tokenizer.json'],
+    benchTPS:{a100:'60–100',h100:'110–170'}, benchUnit:'tok/s',
+    notes:'Apache 2.0. Best VLM for Arabic OCR in images. Understands documents, charts, handwriting.'
+  },
+  'phi4-vision': {
+    name:'Phi-4 Vision', params:'14B', hfId:'microsoft/Phi-4-vision-instruct',
+    cat:'vlm', uses:['vlm'],
+    sizeGB:{fp16:30,int8:15,int4:8}, minVRAM:{fp16:34,int8:18,int4:11},
+    license:'MIT', requiresAuth:false,
+    maxCtx:131072, defaultCtx:8192, arabic:false,
+    frameworks:['vllm'], ollamaTag:null, vllmDtype:'bfloat16',
+    dockerImg:'vllm/vllm-openai:v0.6.4.post1',
+    shards:'6 safetensor shards', downloadFiles:['model-0000{1-6}-of-00006.safetensors','config.json','preprocessor_config.json','tokenizer.json'],
+    benchTPS:{a100:'45–75',h100:'80–130'}, benchUnit:'tok/s',
+    notes:'MIT. Strong document understanding, chart analysis, and scientific image QA.'
+  },
+};
+
+var USE_CASES = {
+  'chat':   { label:'Chat / Q&A',            models:['llama31-8b','qwen25-7b','qwen25-72b','llama31-70b','mistral-7b','phi4','deepseek-r1-7b'] },
+  'rag':    { label:'RAG / Document Search', models:['qwen25-7b','llama31-8b','bge-m3','bge-large-en','bge-reranker-v2','qwen2-vl-7b'] },
+  'code':   { label:'Code Assistant',        models:['qwen25-coder-7b','qwen25-coder-32b','phi4','deepseek-r1-7b'] },
+  'stt':    { label:'Speech-to-Text',        models:['whisper-large-v3','whisper-medium'] },
+  'tts':    { label:'Text-to-Speech',        models:['kokoro-82m','xtts-v2'] },
+  'vlm':    { label:'Image / Doc Understanding', models:['qwen2-vl-7b','phi4-vision'] },
+  'search': { label:'Semantic Search',       models:['bge-m3','bge-large-en','bge-reranker-v2'] },
+  'agent':  { label:'Agentic AI',            models:['qwen25-7b','llama31-8b','qwen25-72b','llama31-70b','phi4'] },
+};
+
+/* ═══════════════════════════════════════
+   THEME
+═══════════════════════════════════════ */
+(function(){
+  var t=localStorage.getItem('gpu_calc_theme');
+  if(t==='light'){document.body.classList.add('light'); setTimeout(function(){var b=document.getElementById('theme-btn');if(b)b.textContent='Dark';},0);}
+})();
+
+function toggleTheme(){
+  var light=document.body.classList.toggle('light');
+  localStorage.setItem('gpu_calc_theme',light?'light':'dark');
+  var b=document.getElementById('theme-btn');if(b)b.textContent=light?'Dark':'Light';
+}
+
+/* ═══════════════════════════════════════
+   INIT
+═══════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded',function(){
+  populateModels('chat');
+  generate();
+});
+
+function onUseCaseChange(){
+  var uc=document.getElementById('inp-usecase').value;
+  populateModels(uc);
+}
+
+function populateModels(uc){
+  var sel=document.getElementById('inp-model');
+  sel.innerHTML='';
+  var ids=(USE_CASES[uc]||USE_CASES.chat).models;
+  ids.forEach(function(id){
+    var m=MODELS[id]; if(!m)return;
+    var o=document.createElement('option');
+    o.value=id; o.textContent=m.name+' ('+m.params+')';
+    sel.appendChild(o);
+  });
+  generate();
+}
+
+/* ═══════════════════════════════════════
+   TAB SWITCHING
+═══════════════════════════════════════ */
+function switchTab(name,btn){
+  document.querySelectorAll('.tab-panel').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});
+  var p=document.getElementById('tab-'+name);
+  if(p)p.classList.add('active');
+  if(btn)btn.classList.add('active');
+}
+
+/* ═══════════════════════════════════════
+   COPY HELPER
+═══════════════════════════════════════ */
+function copyCode(btn,preId){
+  var pre=document.getElementById(preId);
+  if(!pre)return;
+  navigator.clipboard.writeText(pre.textContent).then(function(){
+    btn.textContent='Copied!'; btn.classList.add('copied');
+    setTimeout(function(){btn.textContent='Copy'; btn.classList.remove('copied');},2000);
+  });
+}
+
+function codeBlock(id,text,label){
+  label=label||'Copy';
+  return '<div class="code-wrap"><pre class="code-block" id="'+id+'">'+escHtml(text)+'</pre>'+
+    '<button class="btn-copy" onclick="copyCode(this,\''+id+'\')">'+label+'</button></div>';
+}
+
+function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+/* ═══════════════════════════════════════
+   CORE CALCULATION
+═══════════════════════════════════════ */
+function calcTP(model,gpu,gpuCount,quant){
+  var need=model.minVRAM[quant]||model.minVRAM.fp16;
+  var vram=gpu.vram;
+  var tp=1;
+  while(tp<gpuCount && tp*vram<need){
+    tp=tp*2;
+  }
+  return Math.min(tp,gpuCount);
+}
+
+function generate(){
+  var modelId=document.getElementById('inp-model').value;
+  if(!modelId){showEmpty();return;}
+  var model=MODELS[modelId]; if(!model){showEmpty();return;}
+
+  var gpuId=document.getElementById('inp-gpu').value;
+  var gpu=GPUS[gpuId];
+  var gpuCount=Math.max(1,parseInt(document.getElementById('inp-gpucount').value)||1);
+  var quant=document.getElementById('inp-quant').value;
+  var ctx=parseInt(document.getElementById('inp-ctx').value)||8192;
+  var maxSeqs=Math.max(1,parseInt(document.getElementById('inp-maxseqs').value)||10);
+  var framework=document.getElementById('inp-framework').value;
+  var namespace=document.getElementById('inp-namespace').value||'ai-workloads';
+  var storePath=document.getElementById('inp-storepath').value||'/mnt/ai-models';
+  var registry=document.getElementById('inp-registry').value||'registry.internal:5000';
+
+  var tp=calcTP(model,gpu,gpuCount,quant);
+  var vramNeeded=model.minVRAM[quant]||model.minVRAM.fp16;
+  var vramAvail=gpu.vram*tp;
+  var vramFit=vramAvail>=vramNeeded;
+  var modelDir=storePath+'/'+model.hfId.split('/')[1];
+  var modelSizeGB=model.sizeGB[quant]||model.sizeGB.fp16;
+
+  buildSummary(model,gpu,gpuCount,quant,ctx,maxSeqs,tp,vramNeeded,vramAvail,vramFit,modelSizeGB,framework);
+  buildDownload(model,gpu,quant,storePath,registry,modelDir,modelSizeGB);
+  buildPrereqs(model,gpu,gpuCount,tp,namespace,storePath,registry);
+  buildConfig(model,gpu,gpuCount,quant,ctx,maxSeqs,tp,storePath,registry,namespace,framework,modelDir);
+  buildK8s(model,gpu,gpuCount,quant,ctx,maxSeqs,tp,storePath,registry,namespace,framework,modelDir);
+  buildValidate(model,namespace,framework);
+  buildTroubleshoot(model,gpu,gpuCount,quant,tp,vramNeeded,vramAvail,framework);
+
+  document.getElementById('empty-state').style.display='none';
+  document.getElementById('results-area').style.display='block';
+}
+
+function showEmpty(){
+  document.getElementById('empty-state').style.display='';
+  document.getElementById('results-area').style.display='none';
+}
+
+/* ═══════════════════════════════════════
+   SUMMARY
+═══════════════════════════════════════ */
+function buildSummary(model,gpu,gpuCount,quant,ctx,maxSeqs,tp,vramNeeded,vramAvail,vramFit,modelSizeGB,framework){
+  var util=Math.round((vramNeeded/vramAvail)*100);
+  var utilCls=util>90?'red':util>75?'amber':'green';
+  var quantLabel={'fp16':'FP16','int8':'INT8','int4':'INT4'}[quant]||quant;
+  var benchKey=Object.keys(GPUS).find(function(k){return k===Object.keys(GPUS).find(function(x){return GPUS[x]===gpu;});});
+  // find proper bench key
+  var gpuKey=Object.keys(GPUS).find(function(k){return GPUS[k]===gpu;});
+  var bench=model.benchTPS&&(model.benchTPS.h100&&gpuKey&&gpuKey.indexOf('h100')>=0?model.benchTPS.h100:
+             model.benchTPS.a100&&gpuKey&&gpuKey.indexOf('a100')>=0?model.benchTPS.a100:
+             model.benchTPS[Object.keys(model.benchTPS)[0]])||'—';
+
+  var sumGrid=''+
+    '<div class="sum-box"><div class="sum-v">'+tp+' / '+gpuCount+'</div><div class="sum-l">GPUs used / available</div></div>'+
+    '<div class="sum-box"><div class="sum-v '+utilCls+'">'+util+'%</div><div class="sum-l">VRAM utilisation</div></div>'+
+    '<div class="sum-box"><div class="sum-v">'+modelSizeGB+' GB</div><div class="sum-l">Download size ('+quantLabel+')</div></div>';
+  document.getElementById('sum-grid').innerHTML=sumGrid;
+
+  var warns='';
+  if(!vramFit){
+    warns+='<div class="warn-box red">⚠ Model needs '+vramNeeded+' GB VRAM but '+tp+' GPU(s) only provide '+vramAvail+' GB. Increase GPU count, use INT8/INT4, or choose a smaller model.</div>';
+  }
+  if(model.requiresAuth){
+    warns+='<div class="warn-box amber">Licence required: '+model.authNote+'</div>';
+  }
+  if(quant==='int4'){
+    warns+='<div class="warn-box blue">INT4 requires a pre-quantized model variant (AWQ/GPTQ). Download the correct quantized version from Hugging Face — see download tab.</div>';
+  }
+  if(!model.arabic){
+    warns+='<div class="warn-box amber">This model has limited Arabic language support. For Arabic tasks use Qwen2.5 or Llama 3.1 series.</div>';
+  }
+  if(framework==='ollama'&&(model.cat==='embedding'||model.cat==='reranker'||model.cat==='stt'||model.cat==='tts')){
+    warns+='<div class="warn-box blue">Ollama is not used for this model type. Configuration will use the appropriate alternative framework.</div>';
+  }
+  document.getElementById('sum-warnings').innerHTML=warns;
+  document.getElementById('sum-notes').textContent=model.notes;
+}
+
+/* ═══════════════════════════════════════
+   TAB 1 — PRE-DOWNLOAD
+═══════════════════════════════════════ */
+function buildDownload(model,gpu,quant,storePath,registry,modelDir,modelSizeGB){
+  var items=[];
+  var q=quant;
+  var quantLabel={'fp16':'FP16/BF16','int8':'INT8','int4':'INT4 (AWQ)'}[q]||q;
+
+  // Step 1: License
+  if(model.requiresAuth){
+    items.push({
+      title:'Accept model licence on Hugging Face',
+      desc:'Visit <strong>huggingface.co/'+model.hfId+'</strong> and click "Agree and access repository". You need a free Hugging Face account. Without this, the download will fail with a 403 error.',
+      warn:'Do not skip. The download command will fail silently without prior acceptance.'
+    });
+  }
+
+  // Step 2: HF token
+  var authCmd=model.requiresAuth?'export HF_TOKEN=hf_your_token_here\n':'';
+
+  // Step 3: Install downloader
+  items.push({
+    title:'Install download tools (on internet-connected machine)',
+    desc:'<div class="code-wrap" style="margin-top:6px"><pre class="code-block" style="font-size:11px">pip install huggingface_hub</pre></div>'
+  });
+
+  // Step 4: Download model
+  var dlCmd=authCmd+'huggingface-cli download \\\n  '+model.hfId+' \\\n  --local-dir '+modelDir+' \\\n  --local-dir-use-symlinks False';
+  if(q==='int4'){
+    dlCmd='# For INT4 (AWQ), download the pre-quantized variant:\n'+authCmd+'huggingface-cli download \\\n  '+model.hfId.split('/')[0]+'/'+model.hfId.split('/')[1]+'-AWQ \\\n  --local-dir '+modelDir+'-AWQ \\\n  --local-dir-use-symlinks False\n\n# If no AWQ variant exists, use GPTQ:\n'+authCmd+'huggingface-cli download \\\n  '+model.hfId.split('/')[0]+'/'+model.hfId.split('/')[1]+'-GPTQ \\\n  --local-dir '+modelDir+'-GPTQ \\\n  --local-dir-use-symlinks False';
+  }
+  items.push({
+    title:'Download model weights (~'+modelSizeGB+' GB)',
+    desc:codeBlock('dl-model-cmd',dlCmd)+'<div style="margin-top:6px;font-size:11px;color:var(--text-mute)">Expected files: '+model.downloadFiles.join(', ')+'</div>'
+  });
+
+  // Step 5: Verify
+  var verifyCmd='ls -lh '+modelDir+'/\n# Check all expected files are present and non-zero size';
+  items.push({
+    title:'Verify download is complete',
+    desc:codeBlock('dl-verify-cmd',verifyCmd)
+  });
+
+  // Step 6: Pull Docker image
+  var imgFull=registry+'/'+model.dockerImg.replace('/','_');
+  var dockerCmd='# Pull image on internet-connected machine:\ndocker pull '+model.dockerImg+'\n\n# Save as tarball for transfer:\ndocker save '+model.dockerImg+' | gzip > '+model.dockerImg.replace(/[:/]/g,'_')+'.tar.gz\n\n# On air-gapped machine — load into local registry:\ndocker load < '+model.dockerImg.replace(/[:/]/g,'_')+'.tar.gz\ndocker tag '+model.dockerImg+' '+imgFull+'\ndocker push '+imgFull;
+  items.push({
+    title:'Pull and transfer Docker image to internal registry',
+    desc:codeBlock('dl-docker-cmd',dockerCmd)+'<div style="margin-top:6px;font-size:11px;color:var(--text-mute)">Image: <strong>'+model.dockerImg+'</strong> &nbsp;·&nbsp; Size: ~8–12 GB compressed</div>'
+  });
+
+  // Step 7: Transfer model files
+  var xferCmd='# On internet-connected machine, archive the model:\ntar -czf '+model.hfId.split('/')[1]+'.tar.gz -C '+storePath+' '+model.hfId.split('/')[1]+'/\n\n# Transfer to air-gapped machine (USB/internal transfer)\n# On air-gapped machine, extract to NFS mount:\nmkdir -p '+modelDir+'\ntar -xzf '+model.hfId.split('/')[1]+'.tar.gz -C '+storePath+'/';
+  items.push({
+    title:'Transfer model files to air-gapped NFS storage',
+    desc:codeBlock('dl-transfer-cmd',xferCmd)+'<div style="margin-top:6px;font-size:11px;color:var(--text-mute)">Target path on cluster: <strong>'+modelDir+'/</strong></div>'
+  });
+
+  // Step 8: Set environment for offline mode
+  var offlineCmd='# Add to all serving pods — prevents Hugging Face download attempts at runtime:\nexport HF_DATASETS_OFFLINE=1\nexport TRANSFORMERS_OFFLINE=1\nexport HF_HUB_OFFLINE=1';
+  items.push({
+    title:'Configure offline mode environment variables',
+    desc:codeBlock('dl-offline-cmd',offlineCmd)+'<div style="margin-top:6px;font-size:11px;color:var(--text-mute)">These will be set in the Kubernetes Deployment manifest (see K8s tab).</div>'
+  });
+
+  // Render
+  var html='<div style="margin-bottom:12px;font-size:12px;color:var(--text-dim)">Total download: <strong>~'+(modelSizeGB+10)+' GB</strong> (model + Docker image). Complete all steps on a machine with internet access before transferring to air-gapped environment.</div>';
+  html+='<ol class="checklist">';
+  items.forEach(function(item,i){
+    html+='<li class="checklist-item">'+
+      '<div class="ci-num">'+(i+1)+'</div>'+
+      '<div class="ci-body">'+
+        '<div class="ci-title">'+item.title+'</div>'+
+        (item.desc?'<div class="ci-desc">'+item.desc+'</div>':'')+
+        (item.warn?'<div class="ci-warn">⚠ '+item.warn+'</div>':'')+
+      '</div></li>';
+  });
+  html+='</ol>';
+  document.getElementById('dl-list').innerHTML=html;
+}
+
+/* ═══════════════════════════════════════
+   TAB 2 — PREREQUISITES
+═══════════════════════════════════════ */
+function buildPrereqs(model,gpu,gpuCount,tp,namespace,storePath,registry){
+  var rows=[
+    {label:'OS',         val:'Ubuntu 22.04 LTS or RHEL 8+',  cmd:'lsb_release -a'},
+    {label:'NVIDIA driver',val:'≥ '+gpu.driverMin,           cmd:'nvidia-smi --query-gpu=driver_version --format=csv,noheader'},
+    {label:'CUDA toolkit', val:'≥ '+gpu.cudaMin,             cmd:'nvcc --version'},
+    {label:'Container runtime',val:'nvidia-container-toolkit ≥ 1.14', cmd:'nvidia-ctk --version'},
+    {label:'Kubernetes',  val:'K8s ≥ 1.26 + kubectl configured', cmd:'kubectl version --short'},
+    {label:'GPU plugin',  val:'NVIDIA device plugin installed', cmd:'kubectl get ds -n kube-system | grep nvidia'},
+    {label:'Namespace',   val:namespace,                     cmd:'kubectl create namespace '+namespace+' --dry-run=client -o yaml | kubectl apply -f -'},
+    {label:'Storage',     val:storePath+' accessible on GPU nodes', cmd:'ls -la '+storePath},
+    {label:'Registry',    val:registry+' reachable from nodes', cmd:'curl -sk https://'+registry+'/v2/'},
+  ];
+
+  var html='<div style="margin-bottom:12px;font-size:12px;color:var(--text-dim)">Run verification commands on each GPU node before deployment. All checks must pass.</div>';
+  html+='<div>';
+  rows.forEach(function(r){
+    html+='<div class="prereq-row">'+
+      '<div>'+
+        '<div class="pr-label">'+r.label+'</div>'+
+        '<div class="pr-cmd">$ '+r.cmd+'</div>'+
+      '</div>'+
+      '<div class="pr-val">'+r.val+'</div>'+
+    '</div>';
+  });
+  html+='</div>';
+
+  // Node label check
+  var labelCmd='# Verify GPU node labels\nkubectl get nodes -l "nvidia.com/gpu=true"\n\n# If label is missing, apply it:\nkubectl label node <gpu-node-name> nvidia.com/gpu=true\n\n# Check GPU count visible to K8s:\nkubectl get nodes -o=custom-columns=NAME:.metadata.name,GPU:".status.allocatable[\'nvidia\\.com/gpu\']"';
+  html+='<div style="margin-top:14px"><div class="rcard-title">Node GPU Labels</div>'+codeBlock('pre-labels',labelCmd)+'</div>';
+
+  // Namespace + PVC setup
+  var nsCmd='# Create namespace\nkubectl create namespace '+namespace+'\n\n# Create PersistentVolume (if NFS — adjust server IP and path)\ncat <<EOF | kubectl apply -f -\napiVersion: v1\nkind: PersistentVolume\nmetadata:\n  name: ai-models-pv\nspec:\n  capacity:\n    storage: 1Ti\n  accessModes:\n    - ReadWriteMany\n  nfs:\n    server: <nfs-server-ip>\n    path: '+storePath+'\n  storageClassName: nfs-manual\nEOF\n\n# Create PVC\ncat <<EOF | kubectl apply -f -\napiVersion: v1\nkind: PersistentVolumeClaim\nmetadata:\n  name: ai-models-pvc\n  namespace: '+namespace+'\nspec:\n  accessModes:\n    - ReadWriteMany\n  resources:\n    requests:\n      storage: 1Ti\n  storageClassName: nfs-manual\nEOF';
+  html+='<div style="margin-top:14px"><div class="rcard-title">Storage Setup</div>'+codeBlock('pre-storage',nsCmd)+'</div>';
+
+  document.getElementById('prereq-content').innerHTML=html;
+}
+
+/* ═══════════════════════════════════════
+   TAB 3 — CONFIGURATION (vLLM / other)
+═══════════════════════════════════════ */
+function buildConfig(model,gpu,gpuCount,quant,ctx,maxSeqs,tp,storePath,registry,namespace,framework,modelDir){
+  var html='';
+  var port=model.servePort||8000;
+  var svcName=model.hfId.split('/')[1].toLowerCase().replace(/[^a-z0-9]/g,'-');
+  var quantLabel={'fp16':null,'int8':'bitsandbytes','int4':'awq'}[quant];
+  var dtype=model.vllmDtype||'float16';
+
+  if(model.cat==='llm'||model.cat==='vlm'){
+    // vLLM command
+    var args=[
+      'python -m vllm.entrypoints.openai.api_server',
+      '  --model '+modelDir,
+      '  --tensor-parallel-size '+tp,
+      '  --max-model-len '+Math.min(ctx,model.maxCtx||ctx),
+      '  --gpu-memory-utilization 0.85',
+      '  --dtype '+dtype,
+      '  --max-num-seqs '+maxSeqs,
+      '  --served-model-name '+svcName,
+      '  --host 0.0.0.0',
+      '  --port '+port,
+    ];
+    if(quantLabel) args.push('  --quantization '+quantLabel);
+    args.push('  --trust-remote-code');
+    var vllmCmd=args.join(' \\\n');
+
+    html+='<div style="margin-bottom:8px"><div class="rcard-title">vLLM Start Command</div>'+codeBlock('cfg-vllm',vllmCmd)+'</div>';
+
+    // Docker run alternative
+    var imgFull=registry+'/'+model.dockerImg.replace('/','_');
+    var dockerRunCmd='docker run -d \\\n'+
+      '  --gpus \'"device=0'+(tp>1?(','+Array.from({length:tp-1},function(_,i){return i+1;}).join(',')):'')+'"\' \\\n'+
+      '  -v '+modelDir+':/model \\\n'+
+      '  -p '+port+':'+port+' \\\n'+
+      '  -e HF_HUB_OFFLINE=1 \\\n'+
+      '  -e TRANSFORMERS_OFFLINE=1 \\\n'+
+      '  --name '+svcName+' \\\n'+
+      '  '+imgFull+' \\\n'+
+      '  --model /model \\\n'+
+      '  --tensor-parallel-size '+tp+' \\\n'+
+      '  --max-model-len '+Math.min(ctx,model.maxCtx||ctx)+' \\\n'+
+      '  --gpu-memory-utilization 0.85 \\\n'+
+      '  --dtype '+dtype+' \\\n'+
+      '  --max-num-seqs '+maxSeqs+' \\\n'+
+      '  --served-model-name '+svcName+' \\\n'+
+      '  --host 0.0.0.0 --port '+port+(quantLabel?' \\\n  --quantization '+quantLabel:'');
+    html+='<div style="margin-top:14px"><div class="rcard-title">Docker Run Alternative</div>'+codeBlock('cfg-docker',dockerRunCmd)+'</div>';
+
+    // Config explanation
+    html+='<div style="margin-top:14px"><div class="rcard-title">Parameter Reference</div>';
+    html+='<div>';
+    [
+      ['--tensor-parallel-size '+tp,'Split model across '+tp+' GPU(s). Must be power of 2. Required when model VRAM > single GPU VRAM.'],
+      ['--max-model-len '+Math.min(ctx,model.maxCtx||ctx),'Context window in tokens. Lower = less KV cache VRAM. Max supported: '+model.maxCtx.toLocaleString()+'.'],
+      ['--gpu-memory-utilization 0.85','Reserve 85% of VRAM for model + KV cache. Leave 15% for CUDA overhead. Increase to 0.90 only if needed.'],
+      ['--dtype '+dtype,'Weight precision. bfloat16 preferred for Llama/Qwen. float16 for older architectures.'],
+      ['--max-num-seqs '+maxSeqs,'Max concurrent requests. Higher = more KV cache memory. Tune to your GPU VRAM.'],
+      [quantLabel?'--quantization '+quantLabel:'(no quantization)','Weight compression. bitsandbytes=INT8, awq=INT4. Requires pre-quantized model for AWQ.'],
+    ].forEach(function(r){
+      html+='<div class="prereq-row"><div><div class="pr-cmd">'+r[0]+'</div></div><div style="font-size:11px;color:var(--text-dim);max-width:240px;text-align:right">'+r[1]+'</div></div>';
+    });
+    html+='</div></div>';
+
+  } else if(model.cat==='embedding'||model.cat==='reranker'){
+    // TEI
+    var teiCmd='# HuggingFace Text Embeddings Inference\ndocker run -d \\\n'+
+      '  --gpus all \\\n'+
+      '  -v '+modelDir+':/model \\\n'+
+      '  -p '+port+':80 \\\n'+
+      '  -e HF_HUB_OFFLINE=1 \\\n'+
+      '  --name '+svcName+' \\\n'+
+      '  '+registry+'/'+model.dockerImg.replace('/','_')+' \\\n'+
+      '  --model-id /model \\\n'+
+      '  --port 80';
+    html+='<div><div class="rcard-title">Text Embeddings Inference Command</div>'+codeBlock('cfg-tei',teiCmd)+'</div>';
+    html+='<div class="warn-box blue" style="margin-top:10px">TEI serves embeddings at port '+port+' on an OpenAI-compatible <code>/embeddings</code> endpoint.</div>';
+
+  } else if(model.cat==='stt'){
+    var sttCmd='# faster-whisper-server\ndocker run -d \\\n'+
+      '  --gpus all \\\n'+
+      '  -v '+modelDir+':/model \\\n'+
+      '  -p 8002:8000 \\\n'+
+      '  -e WHISPER__MODEL=/model \\\n'+
+      '  -e HF_HUB_OFFLINE=1 \\\n'+
+      '  --name '+svcName+' \\\n'+
+      '  '+registry+'/'+model.dockerImg.replace('/','_');
+    html+='<div><div class="rcard-title">faster-whisper-server Command</div>'+codeBlock('cfg-stt',sttCmd)+'</div>';
+    html+='<div class="warn-box green" style="margin-top:10px">API exposed at port 8002. Transcribe via POST /v1/audio/transcriptions (OpenAI-compatible).</div>';
+
+  } else if(model.cat==='tts'){
+    var ttsName=model.hfId.split('/')[1];
+    var ttsCmd='# '+ttsName+' TTS server\ndocker run -d \\\n'+
+      '  --gpus all \\\n'+
+      '  -v '+modelDir+':/model \\\n'+
+      '  -p 8003:8000 \\\n'+
+      '  --name '+svcName+' \\\n'+
+      '  '+registry+'/'+model.dockerImg.replace('/','_');
+    html+='<div><div class="rcard-title">TTS Server Command</div>'+codeBlock('cfg-tts',ttsCmd)+'</div>';
+    html+='<div class="warn-box green" style="margin-top:10px">TTS API exposed at port 8003.</div>';
+  }
+
+  // Ollama alternative (if LLM and has ollamaTag)
+  if((model.cat==='llm'||model.cat==='vlm') && model.ollamaTag && framework==='ollama'){
+    var ollamaCmd='# Pull and run with Ollama\nollama pull '+model.ollamaTag+'\nollama serve\n\n# Or via Docker:\ndocker run -d \\\n  --gpus all \\\n  -v '+storePath+'/ollama:/root/.ollama \\\n  -p 11434:11434 \\\n  --name ollama \\\n  '+registry+'/ollama_ollama:latest\n\n# Inside container, pull model:\ndocker exec -it ollama ollama pull '+model.ollamaTag;
+    html+='<div style="margin-top:14px"><div class="rcard-title">Ollama Alternative (dev / low traffic)</div>'+codeBlock('cfg-ollama',ollamaCmd)+'</div>';
+    html+='<div class="warn-box amber" style="margin-top:8px">Ollama is for development only. For production (10+ concurrent users) use vLLM — it handles parallel requests 4x more efficiently.</div>';
+  }
+
+  document.getElementById('config-content').innerHTML=html;
+}
+
+/* ═══════════════════════════════════════
+   TAB 4 — K8s MANIFEST
+═══════════════════════════════════════ */
+function buildK8s(model,gpu,gpuCount,quant,ctx,maxSeqs,tp,storePath,registry,namespace,framework,modelDir){
+  var svcName=model.hfId.split('/')[1].toLowerCase().replace(/[^a-z0-9]/g,'-');
+  var port=model.servePort||8000;
+  var dtype=model.vllmDtype||'float16';
+  var quantFlag={'fp16':'','int8':'        - "--quantization"\n        - "bitsandbytes"\n','int4':'        - "--quantization"\n        - "awq"\n'}[quant]||'';
+  var imgFull=registry+'/'+model.dockerImg.replace('/','_');
+  var cpuReq=tp*4;
+  var cpuLim=tp*8;
+  var memReq=Math.round(model.sizeGB[quant]||model.sizeGB.fp16)*2;
+  var memLim=memReq*2;
+  var ctxCapped=Math.min(ctx,model.maxCtx||ctx);
+
+  var args='';
+  if(model.cat==='llm'||model.cat==='vlm'){
+    args='        - "--model"\n        - "/models/'+model.hfId.split('/')[1]+'"\n'+
+         '        - "--tensor-parallel-size"\n        - "'+tp+'"\n'+
+         '        - "--max-model-len"\n        - "'+ctxCapped+'"\n'+
+         '        - "--gpu-memory-utilization"\n        - "0.85"\n'+
+         '        - "--dtype"\n        - "'+dtype+'"\n'+
+         '        - "--max-num-seqs"\n        - "'+maxSeqs+'"\n'+
+         '        - "--served-model-name"\n        - "'+svcName+'"\n'+
+         '        - "--host"\n        - "0.0.0.0"\n'+
+         '        - "--port"\n        - "'+port+'"\n'+
+         quantFlag+
+         '        - "--trust-remote-code"';
+  } else if(model.cat==='embedding'||model.cat==='reranker'){
+    args='        - "--model-id"\n        - "/models/'+model.hfId.split('/')[1]+'"\n'+
+         '        - "--port"\n        - "80"';
+    port=80;
+  } else if(model.cat==='stt'){
+    args=''; // env-based config
+  }
+
+  var cmdLine=(model.cat==='llm'||model.cat==='vlm')
+    ? '        command: ["python", "-m", "vllm.entrypoints.openai.api_server"]'
+    : (model.cat==='embedding'||model.cat==='reranker')
+    ? '        command: ["text-embeddings-router"]'
+    : '';
+
+  var envExtra=(model.cat==='stt')
+    ? '        env:\n        - name: WHISPER__MODEL\n          value: "/models/'+model.hfId.split('/')[1]+'"\n        - name: HF_HUB_OFFLINE\n          value: "1"\n        - name: TRANSFORMERS_OFFLINE\n          value: "1"'
+    : '        env:\n        - name: HF_HUB_OFFLINE\n          value: "1"\n        - name: TRANSFORMERS_OFFLINE\n          value: "1"\n        - name: HF_DATASETS_OFFLINE\n          value: "1"';
+
+  var probePort=port;
+  var probePath=(model.cat==='llm'||model.cat==='vlm')?'/health':'/health';
+
+  var yaml='# ─── Namespace ───────────────────────────────────────\napiVersion: v1\nkind: Namespace\nmetadata:\n  name: '+namespace+'\n---\n'+
+'# ─── PersistentVolumeClaim ──────────────────────────\napiVersion: v1\nkind: PersistentVolumeClaim\nmetadata:\n  name: ai-models-pvc\n  namespace: '+namespace+'\nspec:\n  accessModes:\n    - ReadWriteMany\n  resources:\n    requests:\n      storage: 1Ti\n  storageClassName: nfs-client\n---\n'+
+'# ─── Deployment ─────────────────────────────────────\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: '+svcName+'\n  namespace: '+namespace+'\n  labels:\n    app: '+svcName+'\nspec:\n  replicas: 1\n  selector:\n    matchLabels:\n      app: '+svcName+'\n  template:\n    metadata:\n      labels:\n        app: '+svcName+'\n    spec:\n      containers:\n      - name: '+svcName+'\n        image: '+imgFull+'\n'+
+(cmdLine?cmdLine+'\n':'')+
+(args?'        args:\n'+args+'\n':'')+
+envExtra+'\n'+
+'        ports:\n        - containerPort: '+port+'\n'+
+'        resources:\n          limits:\n            nvidia.com/gpu: "'+tp+'"\n            memory: "'+memLim+'Gi"\n            cpu: "'+cpuLim+'"\n          requests:\n            nvidia.com/gpu: "'+tp+'"\n            memory: "'+memReq+'Gi"\n            cpu: "'+cpuReq+'"\n'+
+'        volumeMounts:\n        - name: model-storage\n          mountPath: /models\n'+
+'        livenessProbe:\n          httpGet:\n            path: '+probePath+'\n            port: '+probePort+'\n          initialDelaySeconds: 180\n          periodSeconds: 30\n          failureThreshold: 3\n'+
+'        readinessProbe:\n          httpGet:\n            path: '+probePath+'\n            port: '+probePort+'\n          initialDelaySeconds: 120\n          periodSeconds: 10\n          failureThreshold: 5\n'+
+'      volumes:\n      - name: model-storage\n        persistentVolumeClaim:\n          claimName: ai-models-pvc\n'+
+'      nodeSelector:\n        nvidia.com/gpu: "true"\n'+
+'      tolerations:\n      - key: "nvidia.com/gpu"\n        operator: "Exists"\n        effect: "NoSchedule"\n'+
+'---\n'+
+'# ─── Service ────────────────────────────────────────\napiVersion: v1\nkind: Service\nmetadata:\n  name: '+svcName+'-svc\n  namespace: '+namespace+'\nspec:\n  selector:\n    app: '+svcName+'\n  ports:\n  - name: http\n    port: '+port+'\n    targetPort: '+port+'\n  type: ClusterIP';
+
+  var applyCmd='# Save manifest to file:\nkubectl apply -f '+svcName+'-deployment.yaml\n\n# Monitor rollout:\nkubectl rollout status deployment/'+svcName+' -n '+namespace+'\n\n# Check pod status:\nkubectl get pods -n '+namespace+' -l app='+svcName+'\n\n# View startup logs:\nkubectl logs -n '+namespace+' -l app='+svcName+' -f --tail=100';
+
+  var html=codeBlock('k8s-yaml',yaml,'Copy YAML');
+  html+='<div style="margin-top:14px"><div class="rcard-title">Apply Commands</div>'+codeBlock('k8s-apply',applyCmd)+'</div>';
+
+  document.getElementById('k8s-content').innerHTML=html;
+}
+
+/* ═══════════════════════════════════════
+   TAB 5 — VALIDATE
+═══════════════════════════════════════ */
+function buildValidate(model,namespace,framework){
+  var svcName=model.hfId.split('/')[1].toLowerCase().replace(/[^a-z0-9]/g,'-');
+  var port=model.servePort||8000;
+  var html='';
+
+  // Step 1: Health check
+  var healthCmd='# From inside the cluster (or port-forward first):\nkubectl port-forward -n '+namespace+' svc/'+svcName+'-svc '+port+':'+port+' &\n\n# Health check:\ncurl http://localhost:'+port+'/health';
+  html+='<div class="rcard-title" style="margin-bottom:8px">Step 1 — Health Check</div>'+codeBlock('val-health',healthCmd);
+  html+='<div style="font-size:11px;color:var(--text-mute);margin-top:4px;margin-bottom:14px">Expected response: <span style="color:var(--accent)">{"status":"ok"}</span> or HTTP 200</div>';
+
+  if(model.cat==='llm'||model.cat==='vlm'){
+    // Step 2: List models
+    var modelsCmd='curl http://localhost:'+port+'/v1/models';
+    html+='<div class="rcard-title" style="margin-bottom:8px">Step 2 — Confirm Model Loaded</div>'+codeBlock('val-models',modelsCmd);
+    html+='<div style="font-size:11px;color:var(--text-mute);margin-top:4px;margin-bottom:14px">Should list model id matching served-model-name.</div>';
+
+    // Step 3: Inference test
+    var testPrompt=model.cat==='vlm'?'Describe what you see in this image.':'What is 2 + 2? Explain step by step.';
+    var inferCmd='curl http://localhost:'+port+'/v1/chat/completions \\\n'+
+      '  -H "Content-Type: application/json" \\\n'+
+      '  -d \'{\n    "model": "'+svcName+'",\n'+
+      '    "messages": [{"role":"user","content":"'+testPrompt+'"}],\n'+
+      '    "max_tokens": 100,\n'+
+      '    "temperature": 0.1\n  }\'';
+    html+='<div class="rcard-title" style="margin-bottom:8px">Step 3 — Test Inference</div>'+codeBlock('val-infer',inferCmd);
+    html+='<div style="font-size:11px;color:var(--text-mute);margin-top:4px;margin-bottom:14px">Response should contain choices[0].message.content with a reasonable answer.</div>';
+
+    // Step 4: Streaming test
+    var streamCmd='curl http://localhost:'+port+'/v1/chat/completions \\\n'+
+      '  -H "Content-Type: application/json" \\\n'+
+      '  -d \'{"model":"'+svcName+'","messages":[{"role":"user","content":"Count from 1 to 5."}],"stream":true,"max_tokens":50}\'';
+    html+='<div class="rcard-title" style="margin-bottom:8px">Step 4 — Test Streaming</div>'+codeBlock('val-stream',streamCmd);
+    html+='<div style="font-size:11px;color:var(--text-mute);margin-top:4px;margin-bottom:14px">Should see data: {...} lines arriving one by one.</div>';
+
+    // Step 5: Performance benchmark
+    var benchCmd='# Quick throughput benchmark (install: pip install vllm)\npython -c "\nimport requests, time, json\nurl = \'http://localhost:'+port+'/v1/completions\'\npayload = {\'model\':\''+svcName+'\',\'prompt\':\'The history of the UAE is\',\'max_tokens\':200,\'temperature\':0}\nstart=time.time()\nr=requests.post(url,json=payload)\nelapsed=time.time()-start\ntoks=r.json()[\'usage\'][\'completion_tokens\']\nprint(f\'Tokens: {toks}, Time: {elapsed:.2f}s, TPS: {toks/elapsed:.1f}\')\n"';
+    html+='<div class="rcard-title" style="margin-bottom:8px">Step 5 — Performance Benchmark</div>'+codeBlock('val-bench',benchCmd);
+    var gpuKey=Object.keys(GPUS)[0];
+    html+='<div style="font-size:11px;color:var(--text-mute);margin-top:4px;margin-bottom:14px">Expected throughput: <strong>'+model.benchTPS.a100+' tokens/sec</strong> (A100) &nbsp;·&nbsp; '+model.benchTPS.h100+' tokens/sec (H100). If significantly slower, check GPU utilisation with nvidia-smi.</div>';
+
+  } else if(model.cat==='embedding'||model.cat==='reranker'){
+    var embCmd='curl http://localhost:'+port+'/v1/embeddings \\\n'+
+      '  -H "Content-Type: application/json" \\\n'+
+      '  -d \'{"input":"Hello world","model":"'+svcName+'"}\'';
+    html+='<div class="rcard-title" style="margin-bottom:8px">Step 2 — Test Embedding</div>'+codeBlock('val-emb',embCmd);
+    html+='<div style="font-size:11px;color:var(--text-mute);margin-top:4px">Response should contain data[0].embedding (a vector of floats).</div>';
+
+  } else if(model.cat==='stt'){
+    var sttCmd='# Test with a WAV audio file:\ncurl http://localhost:8002/v1/audio/transcriptions \\\n'+
+      '  -H "Content-Type: multipart/form-data" \\\n'+
+      '  -F "file=@test.wav" \\\n'+
+      '  -F "model=whisper-1"\n\n# Expected: {"text": "...transcribed text..."}';
+    html+='<div class="rcard-title" style="margin-bottom:8px">Step 2 — Test Transcription</div>'+codeBlock('val-stt',sttCmd);
+
+  } else if(model.cat==='tts'){
+    var ttsCmd='curl http://localhost:8003/v1/audio/speech \\\n'+
+      '  -H "Content-Type: application/json" \\\n'+
+      '  -d \'{"input":"Hello, this is a test of the text to speech system.","voice":"af_bella"}\' \\\n'+
+      '  --output test.wav && aplay test.wav';
+    html+='<div class="rcard-title" style="margin-bottom:8px">Step 2 — Test Speech Synthesis</div>'+codeBlock('val-tts',ttsCmd);
+  }
+
+  // GPU monitoring
+  var gpuMonCmd='# Monitor GPU utilisation during inference (run in separate terminal):\nwatch -n1 nvidia-smi\n\n# Or stream metrics:\nnvidia-smi dmon -s mu -d 1';
+  html+='<div class="rcard-title" style="margin-top:14px;margin-bottom:8px">GPU Monitoring</div>'+codeBlock('val-gpu',gpuMonCmd);
+  html+='<div style="font-size:11px;color:var(--text-mute);margin-top:4px">During inference, GPU utilisation should be 60–95%. If under 30%, check tensor parallelism settings.</div>';
+
+  document.getElementById('validate-content').innerHTML=html;
+}
+
+/* ═══════════════════════════════════════
+   TAB 6 — TROUBLESHOOT
+═══════════════════════════════════════ */
+function buildTroubleshoot(model,gpu,gpuCount,quant,tp,vramNeeded,vramAvail,framework){
+  var svcName=model.hfId.split('/')[1].toLowerCase().replace(/[^a-z0-9]/g,'-');
+  var issues=[
+    {
+      q:'Pod stuck in Pending state',
+      a:'Check if GPU nodes have the nvidia.com/gpu label and enough free GPUs.\n\n'+
+        '$ kubectl describe pod -n ai-workloads\n'+
+        '# Look for: "0/N nodes are available: N Insufficient nvidia.com/gpu"\n\n'+
+        '# Fix: label a GPU node\n'+
+        '$ kubectl label node <node-name> nvidia.com/gpu=true\n\n'+
+        '# Check NVIDIA device plugin is running:\n'+
+        '$ kubectl get pods -n kube-system | grep nvidia'
+    },
+    {
+      q:'CUDA out of memory (OOM) crash',
+      a:'The model + KV cache exceeds available VRAM. Options in order of preference:\n\n'+
+        '1. Reduce context window:  --max-model-len 4096\n'+
+        '2. Reduce concurrent requests:  --max-num-seqs 5\n'+
+        '3. Reduce GPU memory utilisation:  --gpu-memory-utilization 0.80\n'+
+        '4. Use INT8 quantization:  --quantization bitsandbytes\n'+
+        '5. Add more GPUs and increase tensor-parallel-size\n\n'+
+        '# Check current VRAM usage:\n'+
+        '$ nvidia-smi --query-gpu=memory.used,memory.free --format=csv'
+    },
+    {
+      q:'Model takes too long to start (timeout on readinessProbe)',
+      a:'Large models take 2–10 minutes to load from disk. Adjust the K8s probe:\n\n'+
+        '  readinessProbe:\n'+
+        '    initialDelaySeconds: 300  # Increase from 120\n'+
+        '    failureThreshold: 20      # Increase from 5\n\n'+
+        '# Check loading progress:\n'+
+        '$ kubectl logs -n ai-workloads -l app='+svcName+' -f\n'+
+        '# Wait for: "Application startup complete."'
+    },
+    {
+      q:'Inference is very slow (< 10 tokens/sec)',
+      a:'Common causes:\n\n'+
+        '1. Wrong tensor-parallel-size: model split across too few or too many GPUs\n'+
+        '   Expected for your setup: --tensor-parallel-size '+tp+'\n\n'+
+        '2. NVLink not active (model spread across PCIe-connected GPUs)\n'+
+        '   $ nvidia-smi nvlink --status  # Should show active links\n\n'+
+        '3. Memory bandwidth saturated by wrong dtype\n'+
+        '   Try: --dtype float16  (some GPUs prefer this over bfloat16)\n\n'+
+        '4. Model loaded in CPU offload mode (VRAM insufficient)\n'+
+        '   $ nvidia-smi  # Check VRAM — should be > 80% used during inference'
+    },
+    {
+      q:'Image pull error (ErrImagePull / ImagePullBackOff)',
+      a:'The pod cannot reach the container registry. Verify:\n\n'+
+        '# Check registry is reachable from the node:\n'+
+        '$ curl -sk https://'+document.getElementById('inp-registry').value+'/v2/\n\n'+
+        '# If using self-signed cert, add to containerd:\n'+
+        '$ cat /etc/containerd/config.toml | grep registry\n\n'+
+        '# Verify image was pushed correctly:\n'+
+        '$ curl -sk https://'+document.getElementById('inp-registry').value+'/v2/catalog'
+    },
+    {
+      q:'"huggingface_hub.utils._errors.RepositoryNotFoundError" at startup',
+      a:'Model trying to download from internet in air-gapped env, or model path is wrong.\n\n'+
+        '# Verify the model files are in the correct path:\n'+
+        '$ ls -la '+(document.getElementById('inp-storepath').value||'/mnt/ai-models')+'/'+model.hfId.split('/')[1]+'/\n'+
+        '# Must contain: config.json, tokenizer.json, *.safetensors\n\n'+
+        '# Verify env vars are set in pod:\n'+
+        '$ kubectl exec -n ai-workloads <pod-name> -- env | grep HF_HUB_OFFLINE\n'+
+        '# Should show: HF_HUB_OFFLINE=1\n\n'+
+        '# Check the --model flag points to the right path:\n'+
+        '# Should be: --model /models/'+model.hfId.split('/')[1]
+    },
+    {
+      q:'Low GPU utilisation during inference (< 30%)',
+      a:'Model may be running with CPU bottleneck or wrong batch settings.\n\n'+
+        '$ nvidia-smi dmon -s mu -d 1  # Monitor live GPU utilisation\n\n'+
+        '# If utilisation is consistently < 30% during requests:\n'+
+        '1. Check --max-num-seqs is high enough for your traffic\n'+
+        '2. Enable continuous batching (default in vLLM)\n'+
+        '3. Check CPU is not the bottleneck:\n'+
+        '   $ top  # Look for 100% on a single core\n'+
+        '4. Increase request rate in your benchmark test'
+    },
+    {
+      q:'NVIDIA driver version mismatch',
+      a:'CUDA version in container does not match driver on host.\n\n'+
+        '# Check host driver:\n'+
+        '$ nvidia-smi | head -5\n'+
+        '# Required: ≥ '+gpu.driverMin+'\n\n'+
+        '# Check CUDA in container:\n'+
+        '$ kubectl exec -n ai-workloads <pod-name> -- nvcc --version\n\n'+
+        '# Rule: CUDA in container ≤ CUDA version supported by host driver\n'+
+        '# Update host driver if needed:\n'+
+        '$ apt-get install nvidia-driver-'+gpu.driverMin+'  # Ubuntu'
+    },
+  ];
+
+  var html='<div id="ts-list">';
+  issues.forEach(function(issue,i){
+    html+='<div class="ts-item" id="ts-'+i+'">'+
+      '<div class="ts-q" onclick="toggleTS('+i+')">'+issue.q+'<span class="ts-arrow">&#9654;</span></div>'+
+      '<div class="ts-a"><pre style="font-family:\'SF Mono\',Consolas,monospace;font-size:11px;line-height:1.7;white-space:pre-wrap;color:var(--text-mid)">'+escHtml(issue.a)+'</pre></div>'+
+    '</div>';
+  });
+  html+='</div>';
+
+  document.getElementById('troubleshoot-content').innerHTML=html;
+}
+
+function toggleTS(i){
+  var el=document.getElementById('ts-'+i);
+  if(el)el.classList.toggle('open');
+}
+
+/* initial load */
+document.addEventListener('DOMContentLoaded',function(){
+  var t=localStorage.getItem('gpu_calc_theme');
+  var btn=document.getElementById('theme-btn');
+  if(t==='light'){document.body.classList.add('light');if(btn)btn.textContent='Dark';}
+  populateModels(document.getElementById('inp-usecase').value);
+  generate();
+});
+</script>
+</body>
+</html>
