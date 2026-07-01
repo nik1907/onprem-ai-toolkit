@@ -721,31 +721,51 @@ function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(
 ═══════════════════════════════════════ */
 function calcDeployment(model,gpu,gpuCount,quant,ctx,maxSeqs){
   var weightVRAM=model.minVRAM[quant]||model.minVRAM.fp16;
-  var kvCacheGB=0, kvPerUser=0;
-  if(model.arch){
-    // bytes per element: FP16=2, INT8=1, INT4=0.5
-    var precBytes=(quant==='int4')?0.5:(quant==='int8')?1:2;
-    // KV cache per concurrent request = layers × kv_heads × head_dim × 2 (K+V) × ctx_tokens × precision
-    kvPerUser=(model.arch.layers*model.arch.kv_heads*model.arch.head_dim*2*ctx*precBytes)/1e9;
-    kvCacheGB=kvPerUser*maxSeqs;
-  }
   var overheadGB=3; // vLLM serving overhead
+
+  // Step 1: minimum TP to fit model weights (must be power of 2, vLLM requirement)
+  var minTP=1;
+  while(minTP<gpuCount && minTP*gpu.vram<weightVRAM+overheadGB){ minTP=minTP*2; }
+  minTP=Math.min(minTP,gpuCount);
+
+  var kvPerUser=0;
+  if(model.arch){
+    var precBytes=(quant==='int4')?0.5:(quant==='int8')?1:2;
+    kvPerUser=(model.arch.layers*model.arch.kv_heads*model.arch.head_dim*2*ctx*precBytes)/1e9;
+  }
+
+  // Step 2: users one replica (one TP group) can serve at 85% VRAM utilisation
+  var vramPerTPGroup=minTP*gpu.vram;
+  var availForKV=vramPerTPGroup*0.85-weightVRAM-overheadGB;
+  var usersPerReplica=kvPerUser>0?Math.max(1,Math.floor(availForKV/kvPerUser)):maxSeqs;
+
+  // Step 3: replicas needed (horizontal scaling — scales linearly with users)
+  var replicas=Math.ceil(maxSeqs/usersPerReplica);
+  var gpusNeeded=minTP*replicas;
+  var gpusUsed=Math.min(gpusNeeded,gpuCount);
+  var actualReplicas=Math.min(replicas,Math.floor(gpuCount/minTP));
+
+  // Step 4: VRAM per replica (each replica serves its fair share of users)
+  var usersPerActualReplica=Math.ceil(maxSeqs/actualReplicas);
+  var kvCacheGB=kvPerUser*usersPerActualReplica;
   var totalVRAM=weightVRAM+kvCacheGB+overheadGB;
-  // Tensor parallel size must be power-of-2 (vLLM requirement)
-  var tp=1;
-  while(tp<gpuCount && tp*gpu.vram<totalVRAM){ tp=tp*2; }
-  tp=Math.min(tp,gpuCount);
-  var vramAvail=tp*gpu.vram;
+  var util=Math.round((totalVRAM/vramPerTPGroup)*100);
+
   return {
-    tp:tp,
+    tp:minTP,
+    replicas:replicas,
+    actualReplicas:actualReplicas,
+    gpusNeeded:gpusNeeded,
+    gpusUsed:gpusUsed,
     weightVRAM:weightVRAM,
     kvCacheGB:Math.round(kvCacheGB*10)/10,
     kvPerUser:Math.round(kvPerUser*100)/100,
+    usersPerReplica:usersPerReplica,
     overheadGB:overheadGB,
     totalVRAM:Math.round(totalVRAM*10)/10,
-    vramAvail:vramAvail,
-    util:Math.round((totalVRAM/vramAvail)*100),
-    fits:vramAvail>=totalVRAM
+    vramAvail:vramPerTPGroup,
+    util:util,
+    fits:gpusNeeded<=gpuCount
   };
 }
 
@@ -773,7 +793,7 @@ function generate(){
   buildDownload(model,gpu,quant,storePath,registry,modelDir,modelSizeGB);
   buildPrereqs(model,gpu,gpuCount,D.tp,namespace,storePath,registry);
   buildConfig(model,gpu,gpuCount,quant,ctx,maxSeqs,D.tp,storePath,registry,namespace,framework,modelDir);
-  buildK8s(model,gpu,gpuCount,quant,ctx,maxSeqs,D.tp,storePath,registry,namespace,framework,modelDir);
+  buildK8s(model,gpu,gpuCount,quant,ctx,maxSeqs,D.tp,D.actualReplicas,storePath,registry,namespace,framework,modelDir);
   buildValidate(model,namespace,framework);
   buildTroubleshoot(model,gpu,gpuCount,quant,D.tp,D.totalVRAM,D.vramAvail,framework);
 
@@ -797,29 +817,38 @@ function buildSummary(model,gpu,gpuCount,quant,ctx,maxSeqs,D,modelSizeGB,framewo
              model.benchTPS.a100&&gpuKey&&gpuKey.indexOf('a100')>=0?model.benchTPS.a100:
              model.benchTPS[Object.keys(model.benchTPS)[0]])||'—';
 
+  var gpuLabel=D.replicas>1
+    ? D.gpusUsed+' / '+gpuCount
+    : D.tp+' / '+gpuCount;
+  var gpuSublabel=D.replicas>1
+    ? D.tp+' GPU/replica × '+D.actualReplicas+' replicas'
+    : 'GPUs used / available';
+
   var sumGrid=''+
-    '<div class="sum-box"><div class="sum-v">'+D.tp+' / '+gpuCount+'</div><div class="sum-l">GPUs used / available</div></div>'+
-    '<div class="sum-box"><div class="sum-v '+utilCls+'">'+D.util+'%</div><div class="sum-l">VRAM utilisation</div></div>'+
+    '<div class="sum-box"><div class="sum-v">'+gpuLabel+'</div><div class="sum-l">'+gpuSublabel+'</div></div>'+
+    '<div class="sum-box"><div class="sum-v '+utilCls+'">'+D.util+'%</div><div class="sum-l">VRAM per replica</div></div>'+
     '<div class="sum-box"><div class="sum-v">'+modelSizeGB+' GB</div><div class="sum-l">Download size ('+quantLabel+')</div></div>';
   document.getElementById('sum-grid').innerHTML=sumGrid;
 
   // VRAM breakdown table
+  var usersPerActualReplica=Math.ceil(maxSeqs/D.actualReplicas);
   var vramBreak='<div class="vram-breakdown">'+
-    '<div class="vb-title">VRAM Breakdown</div>'+
+    '<div class="vb-title">VRAM Breakdown — per replica ('+D.tp+' GPU × '+D.actualReplicas+' replica'+(D.actualReplicas>1?'s':'')+' = '+D.gpusUsed+' GPU'+(D.gpusUsed>1?'s':'')+' total)</div>'+
     '<div class="vb-row"><span>Model weights ('+quantLabel+')</span><span>'+D.weightVRAM+' GB</span></div>'+
-    (model.arch?'<div class="vb-row"><span>KV cache ('+maxSeqs+' users × '+Math.round(ctx/1024)+'K ctx)</span><span>'+D.kvCacheGB+' GB</span></div>':'')+
+    (model.arch?'<div class="vb-row"><span>KV cache (~'+usersPerActualReplica+' users × '+Math.round(ctx/1024)+'K ctx per replica)</span><span>'+D.kvCacheGB+' GB</span></div>':'')+
     '<div class="vb-row"><span>vLLM serving overhead</span><span>'+D.overheadGB+' GB</span></div>'+
-    '<div class="vb-row vb-total"><span>Total needed</span><span>'+D.totalVRAM+' GB</span></div>'+
-    '<div class="vb-row"><span>Available ('+D.tp+' × '+gpu.vram+' GB '+gpu.name+')</span><span>'+D.vramAvail+' GB</span></div>'+
+    '<div class="vb-row vb-total"><span>Total per replica</span><span>'+D.totalVRAM+' GB</span></div>'+
+    '<div class="vb-row"><span>Available per replica ('+D.tp+' × '+gpu.vram+' GB '+gpu.name+')</span><span>'+D.vramAvail+' GB</span></div>'+
+    (model.arch?'<div class="vb-row" style="color:var(--text-mute);font-size:11px"><span>Each replica can serve up to '+D.usersPerReplica+' concurrent users</span><span></span></div>':'')+
     '</div>';
   document.getElementById('sum-vram').innerHTML=vramBreak;
 
   var warns='';
   if(!D.fits){
-    warns+='<div class="warn-box red">⚠ Model needs '+D.totalVRAM+' GB VRAM but '+D.tp+' GPU(s) only provide '+D.vramAvail+' GB. Reduce concurrent users, use INT8/INT4, add more GPUs, or choose a smaller model.</div>';
+    warns+='<div class="warn-box red">⚠ '+maxSeqs+' users needs '+D.gpusNeeded+' GPUs ('+D.replicas+' replica'+(D.replicas>1?'s':'')+' × '+D.tp+' GPU each) but only '+gpuCount+' GPUs are available. Add more GPUs, reduce concurrent users, use INT8/INT4, or choose a smaller model.</div>';
   }
   if(D.util>85&&D.fits){
-    warns+='<div class="warn-box amber">⚠ VRAM utilisation is '+D.util+'% — above 85% risks out-of-memory crashes during traffic spikes. Consider reducing concurrent users or adding a GPU.</div>';
+    warns+='<div class="warn-box amber">⚠ VRAM utilisation is '+D.util+'% per replica — above 85% risks out-of-memory crashes during traffic spikes. Consider adding more GPUs to allow more replicas.</div>';
   }
   if(model.requiresAuth){
     warns+='<div class="warn-box amber">Licence required: '+model.authNote+'</div>';
@@ -1084,7 +1113,7 @@ function buildConfig(model,gpu,gpuCount,quant,ctx,maxSeqs,tp,storePath,registry,
 /* ═══════════════════════════════════════
    TAB 4 — K8s MANIFEST
 ═══════════════════════════════════════ */
-function buildK8s(model,gpu,gpuCount,quant,ctx,maxSeqs,tp,storePath,registry,namespace,framework,modelDir){
+function buildK8s(model,gpu,gpuCount,quant,ctx,maxSeqs,tp,replicas,storePath,registry,namespace,framework,modelDir){
   var svcName=model.hfId.split('/')[1].toLowerCase().replace(/[^a-z0-9]/g,'-');
   var port=model.servePort||8000;
   var dtype=model.vllmDtype||'float16';
@@ -1132,7 +1161,7 @@ function buildK8s(model,gpu,gpuCount,quant,ctx,maxSeqs,tp,storePath,registry,nam
 
   var yaml='# ─── Namespace ───────────────────────────────────────\napiVersion: v1\nkind: Namespace\nmetadata:\n  name: '+namespace+'\n---\n'+
 '# ─── PersistentVolumeClaim ──────────────────────────\napiVersion: v1\nkind: PersistentVolumeClaim\nmetadata:\n  name: ai-models-pvc\n  namespace: '+namespace+'\nspec:\n  accessModes:\n    - ReadWriteMany\n  resources:\n    requests:\n      storage: 1Ti\n  storageClassName: nfs-client\n---\n'+
-'# ─── Deployment ─────────────────────────────────────\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: '+svcName+'\n  namespace: '+namespace+'\n  labels:\n    app: '+svcName+'\nspec:\n  replicas: 1\n  selector:\n    matchLabels:\n      app: '+svcName+'\n  template:\n    metadata:\n      labels:\n        app: '+svcName+'\n    spec:\n      containers:\n      - name: '+svcName+'\n        image: '+imgFull+'\n'+
+'# ─── Deployment ─────────────────────────────────────\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: '+svcName+'\n  namespace: '+namespace+'\n  labels:\n    app: '+svcName+'\nspec:\n  replicas: '+replicas+'  # '+replicas+' replica'+(replicas>1?'s':'')+' × '+tp+' GPU each = '+replicas*tp+' GPUs total\n  selector:\n    matchLabels:\n      app: '+svcName+'\n  template:\n    metadata:\n      labels:\n        app: '+svcName+'\n    spec:\n      containers:\n      - name: '+svcName+'\n        image: '+imgFull+'\n'+
 (cmdLine?cmdLine+'\n':'')+
 (args?'        args:\n'+args+'\n':'')+
 envExtra+'\n'+
