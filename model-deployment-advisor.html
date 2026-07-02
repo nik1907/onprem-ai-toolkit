@@ -142,6 +142,22 @@
     .sum-v.amber{color:var(--warn-amber);}
     .sum-v.red{color:var(--warn-red);}
     .sum-l{font-size:10px;color:var(--text-mute);margin-top:4px;}
+    /* Experience level buttons + step blocks */
+    .exp-btn{flex:1;padding:6px 4px;border-radius:var(--r-sm);border:1px solid var(--border-hi);background:transparent;color:var(--text-dim);font-size:11px;font-weight:600;cursor:pointer;transition:all .2s;}
+    .exp-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+    .explain-box{background:var(--bg-input);border-left:3px solid var(--accent);border-radius:0 var(--r-sm) var(--r-sm) 0;padding:8px 12px;margin:6px 0 10px;font-size:11px;color:var(--text-dim);line-height:1.65;}
+    .explain-box .eb-title{font-weight:700;color:var(--text-hi);margin-bottom:4px;font-size:11px;}
+    .step-block{background:var(--bg-card2);border:1px solid var(--border);border-radius:var(--r-md);padding:12px 14px;margin-bottom:10px;}
+    .step-block .sb-num{font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;}
+    .step-block .sb-title{font-size:13px;font-weight:600;color:var(--text-hi);margin-bottom:4px;}
+    .step-block .sb-why{font-size:11px;color:var(--text-dim);margin-bottom:8px;line-height:1.55;}
+    .step-block .sb-check{margin-top:8px;padding:6px 10px;background:rgba(48,209,88,0.08);border-radius:var(--r-sm);font-size:11px;color:#30d158;line-height:1.5;}
+    .step-block .sb-warn{margin-top:6px;padding:6px 10px;background:rgba(255,159,10,0.1);border-radius:var(--r-sm);font-size:11px;color:#ff9f0a;line-height:1.5;}
+    .step-block .sb-note{margin-top:6px;padding:6px 10px;background:var(--bg-input);border-radius:var(--r-sm);font-size:11px;color:var(--text-dim);line-height:1.5;}
+    .mode-badge{display:inline-block;font-size:9px;font-weight:700;padding:2px 6px;border-radius:var(--r-pill);text-transform:uppercase;letter-spacing:.05em;margin-left:6px;vertical-align:middle;}
+    .mode-badge.beginner{background:rgba(48,209,88,0.15);color:#30d158;}
+    .mode-badge.intermediate{background:rgba(10,132,255,0.15);color:#0a84ff;}
+    .mode-badge.expert{background:rgba(255,159,10,0.15);color:#ff9f0a;}
     /* System stack component cards */
     .comp-card{background:var(--bg-card2);border:1px solid var(--border-hi);border-radius:var(--r-md);padding:10px 12px;margin-bottom:8px;}
     .comp-card.optional-off{opacity:0.5;}
@@ -256,6 +272,59 @@
             <option value="int4">INT4 — quarter VRAM, moderate quality loss</option>
           </select>
         </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Your Experience &amp; Setup</div>
+      <div class="field">
+        <label>Your experience level</label>
+        <div style="display:flex;gap:6px;margin-top:4px">
+          <button class="exp-btn active" id="exp-beginner" onclick="setExp('beginner')">Beginner</button>
+          <button class="exp-btn" id="exp-intermediate" onclick="setExp('intermediate')">Intermediate</button>
+          <button class="exp-btn" id="exp-expert" onclick="setExp('expert')">Expert</button>
+        </div>
+        <div id="exp-desc" style="font-size:10px;color:var(--text-mute);margin-top:6px;line-height:1.5">Every step explained in plain English — no prior knowledge assumed.</div>
+      </div>
+      <div class="field">
+        <label for="inp-servers">How many GPU servers do you have?</label>
+        <select class="sinp" id="inp-servers" onchange="generate()">
+          <option value="1">1 server</option>
+          <option value="2">2–4 servers</option>
+          <option value="many">5 or more servers</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="inp-internet">Do your GPU servers have internet access?</label>
+        <select class="sinp" id="inp-internet" onchange="generate()">
+          <option value="airgap">No — completely air-gapped (no internet)</option>
+          <option value="yes">Yes — they can reach the internet</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="inp-k8s">Is Kubernetes already installed on your servers?</label>
+        <select class="sinp" id="inp-k8s" onchange="generate()">
+          <option value="no">No — I need to install it</option>
+          <option value="yes">Yes — already running</option>
+          <option value="dunno">I'm not sure</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="inp-registry-status">Do you have an internal container registry?</label>
+        <select class="sinp" id="inp-registry-status" onchange="generate()">
+          <option value="no">No — I need to set one up</option>
+          <option value="yes">Yes — already have one</option>
+          <option value="dunno">I'm not sure what that is</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="inp-os">Operating system on your GPU servers</label>
+        <select class="sinp" id="inp-os" onchange="generate()">
+          <option value="ubuntu22">Ubuntu 22.04 LTS (recommended)</option>
+          <option value="ubuntu20">Ubuntu 20.04 LTS</option>
+          <option value="rhel8">RHEL / CentOS 8+</option>
+          <option value="other">Other Linux</option>
+        </select>
       </div>
     </div>
 
@@ -677,6 +746,50 @@ var USE_CASES = {
   'search': { label:'Semantic Search',       models:['bge-m3','bge-large-en','bge-reranker-v2'] },
   'agent':  { label:'Agentic AI',            models:['qwen25-7b','llama31-8b','qwen25-72b','llama31-70b','phi4'] },
 };
+
+var _exp = 'beginner'; // experience level: beginner | intermediate | expert
+
+function setExp(level){
+  _exp = level;
+  localStorage.setItem('mda_exp', level);
+  var descs = {
+    beginner: 'Every step explained in plain English — no prior knowledge assumed.',
+    intermediate: 'Commands with context — assumes basic Linux and Docker knowledge.',
+    expert: 'Commands only — no explanations.'
+  };
+  document.getElementById('exp-desc').textContent = descs[level];
+  ['beginner','intermediate','expert'].forEach(function(l){
+    var btn = document.getElementById('exp-'+l);
+    if(btn) btn.classList.toggle('active', l===level);
+  });
+  generate();
+}
+
+function getSetup(){
+  return {
+    servers: (document.getElementById('inp-servers')||{value:'1'}).value,
+    internet: (document.getElementById('inp-internet')||{value:'airgap'}).value,
+    k8s: (document.getElementById('inp-k8s')||{value:'no'}).value,
+    registryStatus: (document.getElementById('inp-registry-status')||{value:'no'}).value,
+    os: (document.getElementById('inp-os')||{value:'ubuntu22'}).value
+  };
+}
+
+function expBox(title, text){
+  if(_exp==='expert') return '';
+  return '<div class="explain-box"><div class="eb-title">'+title+'</div>'+text+'</div>';
+}
+
+function stepBlock(num, title, why, cmdHtml, checkText, warnText, noteText){
+  var html='<div class="step-block"><div class="sb-num">Step '+num+'</div><div class="sb-title">'+title+'</div>';
+  if(_exp!=='expert' && why) html+='<div class="sb-why">'+why+'</div>';
+  if(cmdHtml) html+=cmdHtml;
+  if(checkText) html+='<div class="sb-check">&#10003; &nbsp;'+checkText+'</div>';
+  if(warnText && _exp!=='expert') html+='<div class="sb-warn">&#9888; &nbsp;'+warnText+'</div>';
+  if(noteText && _exp==='beginner') html+='<div class="sb-note">&#128161; &nbsp;'+noteText+'</div>';
+  html+='</div>';
+  return html;
+}
 
 var SYSTEM_STACKS = {
   'sys-rag': {
@@ -1413,129 +1526,296 @@ function buildSummary(model,gpu,gpuCount,quant,ctx,maxSeqs,D,modelSizeGB,framewo
    TAB 1 — PRE-DOWNLOAD
 ═══════════════════════════════════════ */
 function buildDownload(model,gpu,quant,storePath,registry,modelDir,modelSizeGB){
-  var items=[];
-  var q=quant;
-  var quantLabel={'fp16':'FP16/BF16','int8':'INT8','int4':'INT4 (AWQ)'}[q]||q;
+  var S = getSetup();
+  var html = '';
 
-  // Step 1: License
+  // ─── Intro ───────────────────────────────────────────────
+  if(_exp==='beginner'){
+    html += '<div style="margin-bottom:14px;padding:12px 16px;background:var(--bg-input);border-radius:var(--r-md);font-size:12px;line-height:1.8;color:var(--text-dim)">'+
+      '<strong style="color:var(--text-hi);font-size:13px">What this tab covers</strong><br>'+
+      'Before you can run AI on your servers, you need to <strong>download the model</strong> (a large file — like buying ingredients from a shop) '+
+      'and <strong>package it into a Docker image</strong> (like putting ingredients in a box ready to cook). '+
+      'Since your servers '+( S.internet==='airgap'?'have <strong>no internet access</strong>, you must download everything on a separate internet-connected computer first and then <em>physically transfer</em> the files to your servers':'have internet access, you can download directly')+'.<br><br>'+
+      '<strong>What you need before starting:</strong><br>'+
+      '&bull; A computer with internet access (your download machine)<br>'+
+      '&bull; Python 3.8+ installed on the download machine<br>'+
+      '&bull; At least <strong>'+(modelSizeGB*1.5).toFixed(0)+' GB free disk space</strong> on the download machine<br>'+
+      '&bull; A USB drive or network share to transfer files to your GPU servers'+
+    '</div>';
+  } else if(_exp==='intermediate'){
+    html += '<div style="margin-bottom:10px;padding:10px 14px;background:var(--bg-input);border-radius:var(--r-md);font-size:12px;color:var(--text-dim)">'+
+      'Download the model and Docker image on an internet-connected machine, then transfer to your '+( S.internet==='airgap'?'air-gapped GPU servers':'GPU servers')+'. Total download: ~'+modelSizeGB+' GB model + Docker image.'+
+    '</div>';
+  }
+
+  // ─── Step 1: Install download tool ───────────────────────
+  var pip_cmd = 'pip install huggingface_hub[cli]';
+  var pip_cmd_rhel = S.os==='rhel8'?'\n# On RHEL/CentOS: pip3 install huggingface_hub[cli]':'';
+  html += stepBlock(1,
+    'Install the HuggingFace download tool on your internet-connected computer',
+    'HuggingFace is the website that hosts open-source AI models (think of it as the Amazon for AI models). '+
+    'This command installs a small program called <code>huggingface-cli</code> that lets you download models from the command line efficiently — '+
+    'much faster and more reliable than downloading through a web browser.',
+    codeBlock('dl-install', pip_cmd+pip_cmd_rhel),
+    'Run <code>huggingface-cli --version</code> — you should see a version number like 0.25.0 or higher.',
+    null,
+    'If you see "pip: command not found", try <code>pip3</code> instead of <code>pip</code>.'
+  );
+
+  // ─── Step 2: HuggingFace account (if needed) ─────────────
   if(model.requiresAuth){
-    items.push({
-      title:'Accept model licence on Hugging Face',
-      desc:'Visit <strong>huggingface.co/'+model.hfId+'</strong> and click "Agree and access repository". You need a free Hugging Face account. Without this, the download will fail with a 403 error.',
-      warn:'Do not skip. The download command will fail silently without prior acceptance.'
-    });
+    html += stepBlock(2,
+      'Create a HuggingFace account and accept the model license',
+      'The model <strong>'+model.name+'</strong> requires you to agree to its license before downloading. '+
+      'This is free — you just need to create an account on huggingface.co and click "Agree" on the model page. Think of it like accepting Terms &amp; Conditions before downloading software.',
+      expBox('Do this in your web browser:',
+        '1. Go to <strong>huggingface.co</strong> and click "Sign Up" (top right)<br>'+
+        '2. Create a free account with your email<br>'+
+        '3. Go to <strong>huggingface.co/'+model.hfId+'</strong><br>'+
+        '4. Click the "Agree and access repository" button<br>'+
+        '5. Go to your Profile &rarr; Settings &rarr; Access Tokens &rarr; New Token &rarr; copy the token<br>'+
+        '6. Run the command below and paste your token when asked'),
+      'You can access the model page without getting a 403 Forbidden error.',
+      'If you skip this step, the download will fail with "401 Unauthorized" or "403 Forbidden".',
+      null
+    );
+    html += codeBlock('dl-login', 'huggingface-cli login\n# Paste your token when prompted (it won\'t show as you type — that\'s normal)');
   }
 
-  // Step 2: HF token
-  var authCmd=model.requiresAuth?'export HF_TOKEN=hf_your_token_here\n':'';
+  // ─── Step 3: Download the model ──────────────────────────
+  var dlCmd = 'huggingface-cli download \\\n  '+model.hfId+' \\\n  --local-dir '+modelDir+' \\\n  --local-dir-use-symlinks False';
+  html += stepBlock(model.requiresAuth?3:2,
+    'Download the model files (~'+modelSizeGB+' GB)',
+    'This downloads all the model weight files from HuggingFace to your computer. '+
+    'It may take 10–60 minutes depending on your internet speed. '+
+    'The <code>--local-dir-use-symlinks False</code> flag ensures all files are fully copied (not linked) — required for air-gapped transfer.',
+    codeBlock('dl-model', dlCmd),
+    'You see files appearing in <code>'+modelDir+'</code>. The download ends with "Download complete". Run <code>ls -lh '+modelDir+'</code> to see the files.',
+    'Do not interrupt the download. If it gets interrupted, run the same command again — it will resume from where it stopped.',
+    'Typical download speed: on a 100 Mbps connection, 20 GB takes about 30 minutes.'
+  );
 
-  // Step 3: Install downloader
-  items.push({
-    title:'Install download tools (on internet-connected machine)',
-    desc:'<div class="code-wrap" style="margin-top:6px"><pre class="code-block" style="font-size:11px">pip install huggingface_hub</pre></div>'
-  });
+  var step = model.requiresAuth ? 4 : 3;
 
-  // Step 4: Download model
-  var dlCmd=authCmd+'huggingface-cli download \\\n  '+model.hfId+' \\\n  --local-dir '+modelDir+' \\\n  --local-dir-use-symlinks False';
-  if(q==='int4'){
-    dlCmd='# For INT4 (AWQ), download the pre-quantized variant:\n'+authCmd+'huggingface-cli download \\\n  '+model.hfId.split('/')[0]+'/'+model.hfId.split('/')[1]+'-AWQ \\\n  --local-dir '+modelDir+'-AWQ \\\n  --local-dir-use-symlinks False\n\n# If no AWQ variant exists, use GPTQ:\n'+authCmd+'huggingface-cli download \\\n  '+model.hfId.split('/')[0]+'/'+model.hfId.split('/')[1]+'-GPTQ \\\n  --local-dir '+modelDir+'-GPTQ \\\n  --local-dir-use-symlinks False';
+  // ─── Step 4: Pull Docker image ────────────────────────────
+  var dockerPullCmd = 'docker pull '+model.dockerImg;
+  html += stepBlock(step,
+    'Download the serving software (Docker image)',
+    'The model files are like raw ingredients — you also need a "kitchen" (serving software) to run them. '+
+    'Docker is a system that packages software so it runs the same way on any computer. '+
+    'This step downloads the serving software package that will load and run your AI model.',
+    codeBlock('dl-docker-pull', dockerPullCmd+(S.internet==='airgap'?'\n# This must be done on your internet-connected machine before going air-gapped':'')),
+    'Run <code>docker images | grep '+model.dockerImg.split(':')[0].split('/').pop()+'</code> — you should see the image listed with its size.',
+    'If you see "Cannot connect to the Docker daemon", Docker is not running. Start it with <code>sudo systemctl start docker</code>.',
+    'The image is typically 5–15 GB. Make sure you have enough disk space before pulling.'
+  );
+  step++;
+
+  if(S.internet==='airgap'){
+    // ─── Step: Save image ─────────────────────────
+    var imgTag = model.dockerImg.replace(/[:/]/g,'_');
+    html += stepBlock(step,
+      'Package the Docker image into a file for transfer',
+      'Since your GPU servers have no internet, you need to save the Docker image as a single file (like zipping it up) and physically copy it to your servers. '+
+      'This file can be put on a USB drive, external hard drive, or transferred over your local network.',
+      codeBlock('dl-save', '# Save the image as a compressed file (this may take 5–10 minutes):\ndocker save '+model.dockerImg+' | gzip > '+imgTag+'.tar.gz\n\n# Check the file was created and note its size:\nls -lh '+imgTag+'.tar.gz'),
+      'You see a <code>'+imgTag+'.tar.gz</code> file. It should be 3–15 GB in size.',
+      null,
+      'The .gz compression typically reduces the file by 20–40%.'
+    );
+    step++;
+
+    html += stepBlock(step,
+      'Transfer all files to your GPU server(s)',
+      'Copy the model folder and the Docker image file to your GPU servers. '+
+      'You can use a USB drive, external hard disk, or if your servers are on the same network, use <code>scp</code> to copy over the network.',
+      codeBlock('dl-transfer',
+        '# Option A: Transfer over network using SCP (replace SERVER_IP with your server\'s IP address):\n'+
+        'scp -r '+modelDir+' user@SERVER_IP:'+storePath+'/\n'+
+        'scp '+imgTag+'.tar.gz user@SERVER_IP:~/\n\n'+
+        '# Option B: Using rsync (faster for large transfers, can resume if interrupted):\n'+
+        'rsync -avz --progress '+modelDir+'/ user@SERVER_IP:'+modelDir+'/\n\n'+
+        '# If transferring via USB drive, mount it and copy:\n'+
+        'cp -r '+modelDir+' /path/to/usb/drive/\n'+
+        'cp '+imgTag+'.tar.gz /path/to/usb/drive/'
+      ),
+      'On the GPU server, run <code>ls -lh '+storePath+'/</code> and <code>ls ~/*.tar.gz</code> — you should see the model folder and the image file.',
+      'Do not delete the files from the download machine until you have verified they are fully copied to the server.',
+      'SCP and rsync can resume interrupted transfers. If the connection drops, run the same command again.'
+    );
+    step++;
+
+    html += stepBlock(step,
+      'Load the Docker image on your GPU server',
+      'Now that the image file is on your server, you need to "unpack" it into Docker\'s storage so Kubernetes can use it. '+
+      'This is like importing a contact on a new phone — the file exists but you need to load it.',
+      codeBlock('dl-load',
+        '# SSH into your GPU server first:\nssh user@SERVER_IP\n\n# Load the image (run this ON the GPU server):\ndocker load < ~/'+imgTag+'.tar.gz\n\n# Verify it loaded correctly:\ndocker images | grep '+model.dockerImg.split(':')[0].split('/').pop()
+      ),
+      'The <code>docker images</code> command shows the image with its name and tag. You should see <code>'+model.dockerImg+'</code> in the list.',
+      null,
+      'Loading a large image takes 2–5 minutes. You\'ll see "Loaded image: ..." when it finishes.'
+    );
+    step++;
+
+    html += stepBlock(step,
+      'Tag the image for your internal registry and push it',
+      'Kubernetes pulls images from a registry (a private image store on your network). '+
+      'You need to tell Docker that this image belongs in your registry by "tagging" it, then "pushing" it there. '+
+      'Think of the registry as your company\'s private app store.',
+      codeBlock('dl-tag-push',
+        '# Tag the image with your registry address:\ndocker tag '+model.dockerImg+' '+registry+'/'+model.dockerImg.replace('/','_')+'\n\n# Push to your internal registry:\ndocker push '+registry+'/'+model.dockerImg.replace('/','_')+'\n\n# Verify it\'s in the registry:\ncurl -s https://'+registry+'/v2/catalog'
+      ),
+      'The registry URL appears in the <code>curl</code> output. Kubernetes can now pull this image on any server in your cluster.',
+      'If your registry uses HTTP (not HTTPS), add it to Docker\'s "insecure registries" in <code>/etc/docker/daemon.json</code>: <code>{"insecure-registries":["'+registry+'"]}</code>',
+      null
+    );
+    step++;
   }
-  items.push({
-    title:'Download model weights (~'+modelSizeGB+' GB)',
-    desc:codeBlock('dl-model-cmd',dlCmd)+'<div style="margin-top:6px;font-size:11px;color:var(--text-mute)">Expected files: '+model.downloadFiles.join(', ')+'</div>'
-  });
 
-  // Step 5: Verify
-  var verifyCmd='ls -lh '+modelDir+'/\n# Check all expected files are present and non-zero size';
-  items.push({
-    title:'Verify download is complete',
-    desc:codeBlock('dl-verify-cmd',verifyCmd)
-  });
+  // ─── Final step: Confirm ────────────────────
+  html += stepBlock(step,
+    'Confirm everything is in place',
+    'Do a final check before moving to the next tab. All files must be in place before you start the Kubernetes deployment.',
+    codeBlock('dl-verify',
+      '# On your GPU server, verify model files exist:\nls -lh '+modelDir+'\n\n# Verify Docker image is available:\ndocker images | grep '+model.dockerImg.split(':')[0].split('/').pop()+'\n\n# Check available disk space (need at least '+(modelSizeGB*1.5).toFixed(0)+' GB free):\ndf -h '+storePath
+    ),
+    'Model folder exists with files, Docker image is listed, disk space is sufficient. You are ready for the Prerequisites tab.',
+    null,
+    null
+  );
 
-  // Step 6: Pull Docker image
-  var imgFull=registry+'/'+model.dockerImg.replace('/','_');
-  var dockerCmd='# Pull image on internet-connected machine:\ndocker pull '+model.dockerImg+'\n\n# Save as tarball for transfer:\ndocker save '+model.dockerImg+' | gzip > '+model.dockerImg.replace(/[:/]/g,'_')+'.tar.gz\n\n# On air-gapped machine — load into local registry:\ndocker load < '+model.dockerImg.replace(/[:/]/g,'_')+'.tar.gz\ndocker tag '+model.dockerImg+' '+imgFull+'\ndocker push '+imgFull;
-  items.push({
-    title:'Pull and transfer Docker image to internal registry',
-    desc:codeBlock('dl-docker-cmd',dockerCmd)+'<div style="margin-top:6px;font-size:11px;color:var(--text-mute)">Image: <strong>'+model.dockerImg+'</strong> &nbsp;·&nbsp; Size: ~8–12 GB compressed</div>'
-  });
-
-  // Step 7: Transfer model files
-  var xferCmd='# On internet-connected machine, archive the model:\ntar -czf '+model.hfId.split('/')[1]+'.tar.gz -C '+storePath+' '+model.hfId.split('/')[1]+'/\n\n# Transfer to air-gapped machine (USB/internal transfer)\n# On air-gapped machine, extract to NFS mount:\nmkdir -p '+modelDir+'\ntar -xzf '+model.hfId.split('/')[1]+'.tar.gz -C '+storePath+'/';
-  items.push({
-    title:'Transfer model files to air-gapped NFS storage',
-    desc:codeBlock('dl-transfer-cmd',xferCmd)+'<div style="margin-top:6px;font-size:11px;color:var(--text-mute)">Target path on cluster: <strong>'+modelDir+'/</strong></div>'
-  });
-
-  // Step 8: Set environment for offline mode
-  var offlineCmd='# Add to all serving pods — prevents Hugging Face download attempts at runtime:\nexport HF_DATASETS_OFFLINE=1\nexport TRANSFORMERS_OFFLINE=1\nexport HF_HUB_OFFLINE=1';
-  items.push({
-    title:'Configure offline mode environment variables',
-    desc:codeBlock('dl-offline-cmd',offlineCmd)+'<div style="margin-top:6px;font-size:11px;color:var(--text-mute)">These will be set in the Kubernetes Deployment manifest (see K8s tab).</div>'
-  });
-
-  // Render
-  var html='<div style="margin-bottom:12px;padding:10px 14px;background:var(--bg-input);border-radius:var(--r-md);font-size:12px;color:var(--text-dim);line-height:1.7">'+
-    '<strong style="color:var(--text-hi)">Total download: ~'+(modelSizeGB+10)+' GB</strong> (model weights + Docker image).<br>'+
-    '🖥 <strong>Steps 1–4:</strong> Run on an <strong>internet-connected machine</strong> (laptop, jump server, or build machine).<br>'+
-    '📦 <strong>Steps 5–7:</strong> Transfer files to your <strong>air-gapped cluster</strong> via USB drive, internal transfer, or secure file share.<br>'+
-    '⚠ Do not skip the environment variable step — without it, the model server will try to contact Hugging Face at startup and crash.'+
-  '</div>';
-  html+='<ol class="checklist">';
-  items.forEach(function(item,i){
-    html+='<li class="checklist-item">'+
-      '<div class="ci-num">'+(i+1)+'</div>'+
-      '<div class="ci-body">'+
-        '<div class="ci-title">'+item.title+'</div>'+
-        (item.desc?'<div class="ci-desc">'+item.desc+'</div>':'')+
-        (item.warn?'<div class="ci-warn">⚠ '+item.warn+'</div>':'')+
-      '</div></li>';
-  });
-  html+='</ol>';
-  document.getElementById('dl-list').innerHTML=html;
+  document.getElementById('dl-list').innerHTML = html;
 }
 
 /* ═══════════════════════════════════════
    TAB 2 — PREREQUISITES
 ═══════════════════════════════════════ */
 function buildPrereqs(model,gpu,gpuCount,tp,namespace,storePath,registry){
+  var S = getSetup();
+  var html = '';
+
+  if(_exp==='beginner'){
+    html += '<div style="margin-bottom:14px;padding:12px 16px;background:var(--bg-input);border-radius:var(--r-md);font-size:12px;line-height:1.8;color:var(--text-dim)">'+
+      '<strong style="color:var(--text-hi);font-size:13px">What this tab covers</strong><br>'+
+      'Before running the AI model, your GPU server needs several software components installed — like making sure your kitchen has a stove, pots, and the right utensils before you start cooking. '+
+      'Run each check command. If the result matches what\'s expected, move to the next one. If not, follow the fix instructions provided.'+
+    '</div>';
+  }
+
+  // K8s install note
+  if(S.k8s==='no'||S.k8s==='dunno'){
+    html += '<div style="margin-bottom:12px;padding:12px 16px;background:rgba(255,159,10,0.08);border:1px solid rgba(255,159,10,0.2);border-radius:var(--r-md);font-size:12px;color:var(--text-dim);line-height:1.7">'+
+      '<strong style="color:#ff9f0a">&#9888; Kubernetes needs to be installed first</strong><br>'+
+      (S.k8s==='dunno'?'Kubernetes is the container orchestration platform that runs and manages AI model servers. If you\'re not sure whether it\'s installed, run <code>kubectl version</code> in your terminal. If you get a version number, it\'s installed.':'')+
+      (S.k8s==='no'?'Kubernetes is not yet installed on your servers. Install it before proceeding. Recommended distribution for AI workloads: <strong>K3s</strong> (single-server) or <strong>RKE2</strong> (multi-server). Run on each GPU server:<br><code>curl -sfL https://get.k3s.io | sh -</code>':'')+
+    '</div>';
+  }
+
+  // Registry setup note
+  if(S.registryStatus==='no'||S.registryStatus==='dunno'){
+    html += '<div style="margin-bottom:12px;padding:12px 16px;background:rgba(10,132,255,0.08);border:1px solid rgba(10,132,255,0.2);border-radius:var(--r-md);font-size:12px;color:var(--text-dim);line-height:1.7">'+
+      '<strong style="color:#0a84ff">&#8505; A container registry is needed</strong><br>'+
+      'A container registry is like a private app store on your network — Kubernetes pulls the serving software from here. '+
+      'The quickest way to set one up: install <strong>Harbor</strong> (recommended) or run a basic Docker registry:<br>'+
+      '<code>docker run -d -p 5000:5000 --name registry --restart always registry:2</code><br>'+
+      'Then set <strong>'+registry+'</strong> as your registry address in the Infrastructure settings on the left.'+
+    '</div>';
+  }
+
   var rows=[
-    {label:'OS',           val:'Ubuntu 22.04 LTS or RHEL 8+',              cmd:'lsb_release -a',                                                        why:'Required base OS for NVIDIA drivers and container runtime compatibility.'},
-    {label:'NVIDIA driver',val:'≥ '+gpu.driverMin,                          cmd:'nvidia-smi --query-gpu=driver_version --format=csv,noheader',            why:'Driver must match or exceed the CUDA version used inside the container.'},
-    {label:'CUDA toolkit', val:'≥ '+gpu.cudaMin,                            cmd:'nvcc --version',                                                         why:'CUDA provides the GPU compute layer that vLLM runs on. Must match your driver.'},
-    {label:'Container runtime',val:'nvidia-container-toolkit ≥ 1.14',       cmd:'nvidia-ctk --version',                                                   why:'Allows Docker/containerd to pass GPU resources into containers.'},
-    {label:'Kubernetes',   val:'K8s ≥ 1.26 + kubectl configured',           cmd:'kubectl version --short',                                                why:'Required cluster version for GPU resource scheduling and volume management.'},
-    {label:'GPU plugin',   val:'NVIDIA device plugin installed',             cmd:'kubectl get ds -n kube-system | grep nvidia',                            why:'Exposes GPU resources (nvidia.com/gpu) to Kubernetes scheduler. Without this, pods cannot request GPUs.'},
-    {label:'Namespace',    val:namespace,                                    cmd:'kubectl create namespace '+namespace+' --dry-run=client -o yaml | kubectl apply -f -', why:'Isolates your AI workloads from other cluster services.'},
-    {label:'Storage',      val:storePath+' accessible on GPU nodes',         cmd:'ls -la '+storePath,                                                      why:'Model files must be accessible from GPU nodes. NFS or local mount required.'},
-    {label:'Registry',     val:registry+' reachable from nodes',             cmd:'curl -sk https://'+registry+'/v2/',                                      why:'Container images are pulled from this internal registry. Must be reachable in air-gapped mode.'},
+    {
+      label:'1. NVIDIA GPU Driver',
+      val:'&ge; '+gpu.driverMin,
+      cmd:'nvidia-smi',
+      why:'The GPU driver is the bridge between the operating system and the GPU hardware. Without it, nothing can use the GPU.',
+      fix:'Download from <strong>nvidia.com/drivers</strong> or run: <code>sudo apt install nvidia-driver-535 -y</code> (Ubuntu) then reboot.',
+      check:'You see a table with GPU name and driver version. The driver version at the top should be '+gpu.driverMin+' or higher.',
+      warn:'If you see "command not found", the driver is not installed. If you see "no devices found", the GPU is not detected — check physical seating of the card.'
+    },
+    {
+      label:'2. CUDA Toolkit',
+      val:'&ge; '+gpu.cudaMin,
+      cmd:'nvcc --version',
+      why:'CUDA is NVIDIA\'s programming platform that AI software uses to talk to the GPU. Required by all AI frameworks.',
+      fix:'Install from <strong>developer.nvidia.com/cuda-downloads</strong>. Select your OS, then copy and run the installer commands.',
+      check:'You see "release '+gpu.cudaMin+'" or higher in the output.',
+      warn:'CUDA version must match your driver version. Use the compatibility table at developer.nvidia.com/cuda-gpus.'
+    },
+    {
+      label:'3. NVIDIA Container Toolkit',
+      val:'&ge; 1.14',
+      cmd:'nvidia-ctk --version',
+      why:'This toolkit lets Docker and Kubernetes pass GPU access into containers. Without it, containers cannot see the GPU.',
+      fix:'<code>curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg &amp;&amp; sudo apt-get install -y nvidia-container-toolkit &amp;&amp; sudo nvidia-ctk runtime configure --runtime=containerd &amp;&amp; sudo systemctl restart containerd</code>',
+      check:'You see a version number like 1.14.x or higher.',
+      warn:'After installing, always restart the container runtime (containerd or docker) for it to take effect.'
+    },
+    {
+      label:'4. Kubernetes + kubectl',
+      val:'&ge; 1.26',
+      cmd:'kubectl version --short 2>/dev/null || kubectl version',
+      why:'Kubernetes manages the deployment, scaling, and health of your AI service. kubectl is the command-line tool to control it.',
+      fix:S.k8s==='no'?'Install K3s: <code>curl -sfL https://get.k3s.io | sh -</code>':'Configure kubectl: <code>export KUBECONFIG=/etc/rancher/k3s/k3s.yaml</code>',
+      check:'You see a Server Version of v1.26 or higher.',
+      warn:'If kubectl can\'t connect, check that the Kubernetes API server is running: <code>sudo systemctl status k3s</code>'
+    },
+    {
+      label:'5. NVIDIA GPU Device Plugin',
+      val:'Running in kube-system',
+      cmd:'kubectl get pods -n kube-system | grep nvidia',
+      why:'This plugin registers GPU resources with Kubernetes so pods can request GPUs. Without it, no pod can be scheduled on a GPU node.',
+      fix:'Install with Helm: <code>helm install nvidia-device-plugin nvdp/nvidia-device-plugin --namespace kube-system</code> or apply the daemonset: <code>kubectl create -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.14.5/nvidia-device-plugin.yml</code>',
+      check:'You see a pod named something like <code>nvidia-device-plugin-daemonset-xxxxx</code> in Running state.',
+      warn:'If not shown, GPU pods will be stuck in "Pending" state with "Insufficient nvidia.com/gpu" error.'
+    },
+    {
+      label:'6. Namespace',
+      val:namespace,
+      cmd:'kubectl get namespace '+namespace+' 2>/dev/null || echo "NOT FOUND"',
+      why:'A namespace is like a folder in Kubernetes — it keeps your AI services separate from other applications on the cluster.',
+      fix:'Create it: <code>kubectl create namespace '+namespace+'</code>',
+      check:'You see the namespace listed with "Active" status. If you see "NOT FOUND", run the fix command.',
+      warn:null
+    },
+    {
+      label:'7. Storage Mount',
+      val:storePath+' accessible',
+      cmd:'ls -la '+storePath+' && df -h '+storePath,
+      why:'All model files (~'+model.sizeGB.fp16+' GB) must be accessible from the GPU nodes. This is usually an NFS share mounted on all servers.',
+      fix:'Mount NFS: <code>sudo mount -t nfs NFS_SERVER:/path '+storePath+'</code> or add to /etc/fstab for persistent mount.',
+      check:'You can see the model folder and the available space is at least '+(model.sizeGB.fp16*2).toFixed(0)+' GB.',
+      warn:'If the path doesn\'t exist: <code>sudo mkdir -p '+storePath+'</code> then mount your storage.'
+    },
+    {
+      label:'8. Verify GPU is visible to Kubernetes',
+      val:'nvidia.com/gpu: '+gpuCount,
+      cmd:'kubectl describe nodes | grep -A5 "nvidia.com/gpu"',
+      why:'This confirms Kubernetes can see your GPU and schedule workloads on it.',
+      fix:'If GPUs show 0, restart the device plugin: <code>kubectl rollout restart daemonset/nvidia-device-plugin-daemonset -n kube-system</code>',
+      check:'You see <code>nvidia.com/gpu: '+gpuCount+'</code> (or the number of GPUs in your node) in both "Capacity" and "Allocatable" sections.',
+      warn:'If not shown after installing the device plugin, reboot the node and wait 2 minutes for it to register.'
+    },
   ];
 
-  var html='<div style="margin-bottom:12px;padding:10px 14px;background:var(--bg-input);border-radius:var(--r-md);font-size:12px;color:var(--text-dim);line-height:1.7">'+
-    '<strong style="color:var(--text-hi)">Run these checks before deploying.</strong> Each item must pass. '+
-    'If any check fails, fix it first — skipping prerequisites is the #1 cause of failed deployments. '+
-    'Run verification commands on each GPU node in your cluster.'+
-  '</div>';
-  html+='<div>';
   rows.forEach(function(r){
-    html+='<div class="prereq-row">'+
-      '<div>'+
+    if(_exp==='expert'){
+      html+='<div class="prereq-row"><div>'+
         '<div class="pr-label">'+r.label+'</div>'+
         '<div class="pr-cmd">$ '+r.cmd+'</div>'+
-        (r.why?'<div style="font-size:10px;color:var(--text-mute);margin-top:2px">'+r.why+'</div>':'')+
-      '</div>'+
-      '<div class="pr-val">'+r.val+'</div>'+
-    '</div>';
+      '</div><div class="pr-val">'+r.val+'</div></div>';
+    } else {
+      html+='<div class="step-block">'+
+        '<div class="sb-num">'+r.label+'</div>'+
+        '<div class="sb-title">Expected: '+r.val+'</div>'+
+        (_exp==='beginner'&&r.why?'<div class="sb-why">'+r.why+'</div>':'')+
+        codeBlock('prereq-'+r.label.replace(/\s/g,''),r.cmd)+
+        '<div class="sb-check">&#10003; &nbsp;'+r.check+'</div>'+
+        (_exp==='beginner'&&r.fix?'<div class="sb-warn">&#128295; &nbsp;Not passing? '+r.fix+'</div>':'')+
+        (_exp==='beginner'&&r.warn?'<div class="sb-note">&#9888; &nbsp;'+r.warn+'</div>':'')+
+      '</div>';
+    }
   });
-  html+='</div>';
-
-  // Node label check
-  var labelCmd='# Verify GPU node labels\nkubectl get nodes -l "nvidia.com/gpu=true"\n\n# If label is missing, apply it:\nkubectl label node <gpu-node-name> nvidia.com/gpu=true\n\n# Check GPU count visible to K8s:\nkubectl get nodes -o=custom-columns=NAME:.metadata.name,GPU:".status.allocatable[\'nvidia\\.com/gpu\']"';
-  html+='<div style="margin-top:14px"><div class="rcard-title">Node GPU Labels</div>'+codeBlock('pre-labels',labelCmd)+'</div>';
-
-  // Namespace + PVC setup
-  var nsCmd='# Create namespace\nkubectl create namespace '+namespace+'\n\n# Create PersistentVolume (if NFS — adjust server IP and path)\ncat <<EOF | kubectl apply -f -\napiVersion: v1\nkind: PersistentVolume\nmetadata:\n  name: ai-models-pv\nspec:\n  capacity:\n    storage: 1Ti\n  accessModes:\n    - ReadWriteMany\n  nfs:\n    server: <nfs-server-ip>\n    path: '+storePath+'\n  storageClassName: nfs-manual\nEOF\n\n# Create PVC\ncat <<EOF | kubectl apply -f -\napiVersion: v1\nkind: PersistentVolumeClaim\nmetadata:\n  name: ai-models-pvc\n  namespace: '+namespace+'\nspec:\n  accessModes:\n    - ReadWriteMany\n  resources:\n    requests:\n      storage: 1Ti\n  storageClassName: nfs-manual\nEOF';
-  html+='<div style="margin-top:14px"><div class="rcard-title">Storage Setup</div>'+codeBlock('pre-storage',nsCmd)+'</div>';
 
   document.getElementById('prereq-content').innerHTML=html;
 }
@@ -1544,113 +1824,116 @@ function buildPrereqs(model,gpu,gpuCount,tp,namespace,storePath,registry){
    TAB 3 — CONFIGURATION (vLLM / other)
 ═══════════════════════════════════════ */
 function buildConfig(model,gpu,gpuCount,quant,ctx,maxSeqs,tp,storePath,registry,namespace,framework,modelDir){
-  var html='';
-  var port=model.servePort||8000;
-  var svcName=model.hfId.split('/')[1].toLowerCase().replace(/[^a-z0-9]/g,'-');
-  var quantLabel={'fp16':null,'int8':'bitsandbytes','int4':'awq'}[quant];
-  var dtype=model.vllmDtype||'float16';
+  var S = getSetup();
+  var html = '';
+  var svcName = model.hfId.split('/')[1].toLowerCase().replace(/[^a-z0-9]/g,'-');
+  var port = model.servePort || 8000;
+  var dtype = model.vllmDtype || 'float16';
+  var ctxCapped = Math.min(ctx, model.maxCtx || ctx);
+
+  if(_exp==='beginner'){
+    html += '<div style="margin-bottom:14px;padding:12px 16px;background:var(--bg-input);border-radius:var(--r-md);font-size:12px;line-height:1.8;color:var(--text-dim)">'+
+      '<strong style="color:var(--text-hi);font-size:13px">What this tab covers</strong><br>'+
+      'This tab gives you the exact command to start the AI model server. '+
+      'Once you run this command, the model loads into GPU memory (this takes a few minutes) and starts listening for requests. '+
+      'Your applications can then send questions to it and receive AI-generated answers.<br><br>'+
+      '<strong>Run these commands on your GPU server</strong> (not on your download machine).'+
+    '</div>';
+  }
 
   if(model.cat==='llm'||model.cat==='vlm'){
-    // vLLM command
-    var args=[
-      'python -m vllm.entrypoints.openai.api_server',
-      '  --model '+modelDir,
-      '  --tensor-parallel-size '+tp,
-      '  --max-model-len '+Math.min(ctx,model.maxCtx||ctx),
-      '  --gpu-memory-utilization 0.85',
-      '  --dtype '+dtype,
-      '  --max-num-seqs '+maxSeqs,
-      '  --served-model-name '+svcName,
-      '  --host 0.0.0.0',
-      '  --port '+port,
-    ];
-    if(quantLabel) args.push('  --quantization '+quantLabel);
-    args.push('  --trust-remote-code');
-    var vllmCmd=args.join(' \\\n');
-
-    html+='<div style="margin-bottom:8px"><div class="rcard-title">vLLM Start Command</div>'+codeBlock('cfg-vllm',vllmCmd)+'</div>';
-
-    // Docker run alternative
-    var imgFull=registry+'/'+model.dockerImg.replace('/','_');
-    var dockerRunCmd='docker run -d \\\n'+
-      '  --gpus \'"device=0'+(tp>1?(','+Array.from({length:tp-1},function(_,i){return i+1;}).join(',')):'')+'"\' \\\n'+
-      '  -v '+modelDir+':/model \\\n'+
-      '  -p '+port+':'+port+' \\\n'+
-      '  -e HF_HUB_OFFLINE=1 \\\n'+
-      '  -e TRANSFORMERS_OFFLINE=1 \\\n'+
-      '  --name '+svcName+' \\\n'+
-      '  '+imgFull+' \\\n'+
-      '  --model /model \\\n'+
+    var vllmCmd = 'python -m vllm.entrypoints.openai.api_server \\\n'+
+      '  --model '+modelDir+' \\\n'+
       '  --tensor-parallel-size '+tp+' \\\n'+
-      '  --max-model-len '+Math.min(ctx,model.maxCtx||ctx)+' \\\n'+
+      '  --max-model-len '+ctxCapped+' \\\n'+
       '  --gpu-memory-utilization 0.85 \\\n'+
       '  --dtype '+dtype+' \\\n'+
       '  --max-num-seqs '+maxSeqs+' \\\n'+
       '  --served-model-name '+svcName+' \\\n'+
-      '  --host 0.0.0.0 --port '+port+(quantLabel?' \\\n  --quantization '+quantLabel:'');
-    html+='<div style="margin-top:14px"><div class="rcard-title">Docker Run Alternative</div>'+codeBlock('cfg-docker',dockerRunCmd)+'</div>';
+      '  --host 0.0.0.0 --port '+port+' \\\n'+
+      '  --trust-remote-code';
 
-    // Config explanation
-    html+='<div style="margin-top:14px"><div class="rcard-title">Parameter Reference</div>';
-    html+='<div>';
-    [
-      ['--tensor-parallel-size '+tp,'Split model across '+tp+' GPU(s). Must be power of 2. Required when model VRAM > single GPU VRAM.'],
-      ['--max-model-len '+Math.min(ctx,model.maxCtx||ctx),'Context window in tokens. Lower = less KV cache VRAM. Max supported: '+model.maxCtx.toLocaleString()+'.'],
-      ['--gpu-memory-utilization 0.85','Reserve 85% of VRAM for model + KV cache. Leave 15% for CUDA overhead. Increase to 0.90 only if needed.'],
-      ['--dtype '+dtype,'Weight precision. bfloat16 preferred for Llama/Qwen. float16 for older architectures.'],
-      ['--max-num-seqs '+maxSeqs,'Max concurrent requests. Higher = more KV cache memory. Tune to your GPU VRAM.'],
-      [quantLabel?'--quantization '+quantLabel:'(no quantization)','Weight compression. bitsandbytes=INT8, awq=INT4. Requires pre-quantized model for AWQ.'],
-    ].forEach(function(r){
-      html+='<div class="prereq-row"><div><div class="pr-cmd">'+r[0]+'</div></div><div style="font-size:11px;color:var(--text-dim);max-width:240px;text-align:right">'+r[1]+'</div></div>';
-    });
-    html+='</div></div>';
+    if(_exp!=='expert'){
+      html += stepBlock(1, 'Install the vLLM serving framework on your GPU server',
+        'vLLM is the software that loads the AI model and handles incoming requests. It is optimised for high-throughput inference — meaning it can handle many simultaneous users efficiently. Install it once on your GPU server.',
+        codeBlock('cfg-install','# SSH into your GPU server first:\nssh user@SERVER_IP\n\n# Install vLLM (requires Python 3.9+ and CUDA):\npip install vllm==0.8.5\n\n# Verify installation:\npython -c "import vllm; print(vllm.__version__)"'),
+        'The version number 0.8.5 (or similar) prints without errors.',
+        'vLLM installation can take 5–10 minutes. If you see CUDA errors, ensure your CUDA version matches the requirements.',
+        'vLLM must be installed on the GPU server, not on your download machine.'
+      );
+    }
+
+    html += stepBlock(_exp==='expert'?1:2, 'Start the AI model server',
+      'This command loads the model into GPU memory and starts a web server that accepts requests. '+
+      'The <strong>--tensor-parallel-size '+tp+'</strong> setting spreads the model across '+tp+' GPU'+(tp>1?'s':'')+' (required for this model size). '+
+      'The <strong>--max-num-seqs '+maxSeqs+'</strong> setting allows up to '+maxSeqs+' simultaneous users.',
+      codeBlock('cfg-start', vllmCmd),
+      'After 2–8 minutes you see "Application startup complete. Uvicorn running on http://0.0.0.0:'+port+'". The model is now ready.',
+      'If you see "CUDA out of memory": reduce --max-num-seqs to a lower number (try '+Math.max(1,Math.floor(maxSeqs/2))+') or reduce --max-model-len to '+Math.floor(ctxCapped/2)+'.',
+      'The first startup always takes longer because the model files are read from disk. Subsequent starts are faster.'
+    );
+
+    if(_exp!=='expert'){
+      html += stepBlock(3, 'Run as a background service (so it keeps running after you close the terminal)',
+        'If you just run the command above in a terminal and close the terminal, the server stops. To keep it running permanently, use <code>nohup</code> or create a systemd service.',
+        codeBlock('cfg-bg',
+          '# Option A: Keep running in background (simple):\nnohup '+vllmCmd.replace(/\\\n  /g,' ')+' > /var/log/'+svcName+'.log 2>&1 &\n\n# Check it\'s running:\ntail -f /var/log/'+svcName+'.log\n\n# Find the process ID to stop it later:\npgrep -f "vllm.entrypoints"\n\n# Stop it:\npkill -f "vllm.entrypoints"'
+        ),
+        'The log file shows "Application startup complete" and the process keeps running after you close the terminal.',
+        null,
+        'For production, use the Kubernetes manifest in the K8s tab instead — it handles auto-restart, health monitoring, and scaling automatically.'
+      );
+    }
+
+    if(_exp!=='expert'){
+      html += '<div class="step-block"><div class="sb-num">Understanding the parameters</div>'+
+        '<div style="font-size:11px;color:var(--text-dim);line-height:1.8">'+
+        '<code>--model '+modelDir+'</code> — where the model files are stored on disk<br>'+
+        '<code>--tensor-parallel-size '+tp+'</code> — splits the model across '+tp+' GPU'+(tp>1?'s (required for this model size)':' (this model fits on one GPU)')+'. Must be a power of 2 (1, 2, 4, 8)<br>'+
+        '<code>--max-model-len '+ctxCapped+'</code> — maximum length of a conversation in tokens (~0.75 words per token). Longer = more memory<br>'+
+        '<code>--gpu-memory-utilization 0.85</code> — use 85% of GPU memory for the model. The remaining 15% is kept free for safety<br>'+
+        '<code>--dtype '+dtype+'</code> — the precision format for calculations. '+dtype+' is standard for this model<br>'+
+        '<code>--max-num-seqs '+maxSeqs+'</code> — maximum number of simultaneous users. Each user needs their own memory allocation<br>'+
+        '<code>--served-model-name '+svcName+'</code> — the name your applications use to call this model in API requests<br>'+
+        '<code>--host 0.0.0.0</code> — accept connections from any IP address on the network (not just localhost)<br>'+
+        '<code>--trust-remote-code</code> — allow the model to use its own custom code (required for some models)'+
+        '</div></div>';
+    }
 
   } else if(model.cat==='embedding'||model.cat==='reranker'){
-    // TEI
-    var teiCmd='# HuggingFace Text Embeddings Inference\ndocker run -d \\\n'+
-      '  --gpus all \\\n'+
-      '  -v '+modelDir+':/model \\\n'+
-      '  -p '+port+':80 \\\n'+
-      '  -e HF_HUB_OFFLINE=1 \\\n'+
-      '  --name '+svcName+' \\\n'+
-      '  '+registry+'/'+model.dockerImg.replace('/','_')+' \\\n'+
-      '  --model-id /model \\\n'+
-      '  --port 80';
-    html+='<div><div class="rcard-title">Text Embeddings Inference Command</div>'+codeBlock('cfg-tei',teiCmd)+'</div>';
-    html+='<div class="warn-box blue" style="margin-top:10px">TEI serves embeddings at port '+port+' on an OpenAI-compatible <code>/embeddings</code> endpoint.</div>';
+    var teiCmd = 'docker run -d \\\n  --gpus all \\\n  -v '+modelDir+':/model \\\n  -p '+port+':80 \\\n  -e HF_HUB_OFFLINE=1 \\\n  --name '+svcName+' \\\n  '+registry+'/'+model.dockerImg.replace('/','_')+' \\\n  --model-id /model --port 80';
+    html += stepBlock(1, 'Start the '+(model.cat==='reranker'?'reranker':'embedding')+' server',
+      model.cat==='embedding'?
+        'The embedding model converts text into numerical vectors (lists of numbers that represent meaning). These vectors are stored in a vector database for semantic search. This is much faster than an LLM — it usually starts in under 30 seconds.':
+        'The reranker model takes a query and a list of candidate documents and scores how relevant each document is. It improves search accuracy by re-ordering results from the embedding search.',
+      codeBlock('cfg-embed', teiCmd),
+      'Run <code>docker logs '+svcName+'</code> and you see "Ready to serve requests" within 30 seconds.',
+      'If you see "permission denied" on the model directory, run: <code>chmod -R 755 '+modelDir+'</code>',
+      'The TEI image uses port 80 internally. We map it to port '+port+' on the host.'
+    );
 
   } else if(model.cat==='stt'){
-    var sttCmd='# faster-whisper-server\ndocker run -d \\\n'+
-      '  --gpus all \\\n'+
-      '  -v '+modelDir+':/model \\\n'+
-      '  -p 8002:8000 \\\n'+
-      '  -e WHISPER__MODEL=/model \\\n'+
-      '  -e HF_HUB_OFFLINE=1 \\\n'+
-      '  --name '+svcName+' \\\n'+
-      '  '+registry+'/'+model.dockerImg.replace('/','_');
-    html+='<div><div class="rcard-title">faster-whisper-server Command</div>'+codeBlock('cfg-stt',sttCmd)+'</div>';
-    html+='<div class="warn-box green" style="margin-top:10px">API exposed at port 8002. Transcribe via POST /v1/audio/transcriptions (OpenAI-compatible).</div>';
+    var sttCmd = 'docker run -d \\\n  --gpus all \\\n  -v '+modelDir+':/model \\\n  -p 8002:8000 \\\n  -e WHISPER__MODEL=/model \\\n  -e HF_HUB_OFFLINE=1 \\\n  --name '+svcName+' \\\n  '+registry+'/'+model.dockerImg.replace('/','_');
+    html += stepBlock(1, 'Start the Speech-to-Text server',
+      'Whisper is OpenAI\'s speech recognition model. This server accepts audio files (WAV, MP3, etc.) and returns text transcriptions. '+
+      'It runs continuously and transcribes audio as fast as your GPU allows.',
+      codeBlock('cfg-stt', sttCmd),
+      'Run <code>docker logs '+svcName+'</code> — you see "Application startup complete" within 60 seconds.',
+      'If the model doesn\'t load, check that the model directory path is correct and contains the model files.',
+      null
+    );
 
   } else if(model.cat==='tts'){
-    var ttsName=model.hfId.split('/')[1];
-    var ttsCmd='# '+ttsName+' TTS server\ndocker run -d \\\n'+
-      '  --gpus all \\\n'+
-      '  -v '+modelDir+':/model \\\n'+
-      '  -p 8003:8000 \\\n'+
-      '  --name '+svcName+' \\\n'+
-      '  '+registry+'/'+model.dockerImg.replace('/','_');
-    html+='<div><div class="rcard-title">TTS Server Command</div>'+codeBlock('cfg-tts',ttsCmd)+'</div>';
-    html+='<div class="warn-box green" style="margin-top:10px">TTS API exposed at port 8003.</div>';
+    var ttsCmd = 'docker run -d \\\n  --gpus all \\\n  -v '+modelDir+':/model \\\n  -p 8003:8000 \\\n  -e HF_HUB_OFFLINE=1 \\\n  --name '+svcName+' \\\n  '+registry+'/'+model.dockerImg.replace('/','_');
+    html += stepBlock(1, 'Start the Text-to-Speech server',
+      'This server accepts text and returns audio files. Send it any text and it returns a WAV file of the speech.',
+      codeBlock('cfg-tts', ttsCmd),
+      'Run <code>docker logs '+svcName+'</code> — you see the server is ready.',
+      null, null
+    );
   }
 
-  // Ollama alternative (if LLM and has ollamaTag)
-  if((model.cat==='llm'||model.cat==='vlm') && model.ollamaTag && framework==='ollama'){
-    var ollamaCmd='# Pull and run with Ollama\nollama pull '+model.ollamaTag+'\nollama serve\n\n# Or via Docker:\ndocker run -d \\\n  --gpus all \\\n  -v '+storePath+'/ollama:/root/.ollama \\\n  -p 11434:11434 \\\n  --name ollama \\\n  '+registry+'/ollama_ollama:latest\n\n# Inside container, pull model:\ndocker exec -it ollama ollama pull '+model.ollamaTag;
-    html+='<div style="margin-top:14px"><div class="rcard-title">Ollama Alternative (dev / low traffic)</div>'+codeBlock('cfg-ollama',ollamaCmd)+'</div>';
-    html+='<div class="warn-box amber" style="margin-top:8px">Ollama is for development only. For production (10+ concurrent users) use vLLM — it handles parallel requests 4x more efficiently.</div>';
-  }
-
-  document.getElementById('config-content').innerHTML=html;
+  document.getElementById('config-content').innerHTML = html;
 }
 
 /* ═══════════════════════════════════════
@@ -1738,96 +2021,123 @@ envExtra+'\n'+
    TAB 5 — VALIDATE
 ═══════════════════════════════════════ */
 function buildValidate(model,namespace,framework){
-  var svcName=model.hfId.split('/')[1].toLowerCase().replace(/[^a-z0-9]/g,'-');
-  var port=model.servePort||8000;
-  var html='<div style="margin-bottom:12px;padding:10px 14px;background:var(--bg-input);border-radius:var(--r-md);font-size:12px;color:var(--text-dim);line-height:1.7">'+
-    '<strong style="color:var(--text-hi)">Run these tests in order.</strong> Each step confirms a different layer of the stack. '+
-    'Start with the health check — if it fails, there is no point running inference tests. '+
-    'Use <code>kubectl port-forward</code> (shown in Step 1) to access the service from your local machine.'+
-  '</div>';
+  var S = getSetup();
+  var svcName = model.hfId.split('/')[1].toLowerCase().replace(/[^a-z0-9]/g,'-');
+  var port = model.servePort || 8000;
+  if(model.cat==='embedding'||model.cat==='reranker') port=80;
+  var html = '';
 
-  // Step 1: Health check
-  var healthCmd='# From inside the cluster (or port-forward first):\nkubectl port-forward -n '+namespace+' svc/'+svcName+'-svc '+port+':'+port+' &\n\n# Health check:\ncurl http://localhost:'+port+'/health';
-  html+='<div class="rcard-title" style="margin-bottom:8px">Step 1 — Health Check</div>'+codeBlock('val-health',healthCmd);
-  html+='<div style="font-size:11px;background:var(--bg-input);border-left:3px solid var(--accent);padding:6px 10px;border-radius:0 var(--r-sm) var(--r-sm) 0;margin-top:4px;margin-bottom:14px;color:var(--text-dim)">'+
-    '✓ <strong>Expected:</strong> <code>{"status":"ok"}</code> or HTTP 200. '+
-    'If you get "Connection refused", the pod is still starting (allow 2–10 minutes for large models). '+
-    'If you get "404 Not Found", check the pod logs with: <code>kubectl logs -n '+namespace+' -l app='+svcName+'</code>'+
-  '</div>';
-
-  if(model.cat==='llm'||model.cat==='vlm'){
-    // Step 2: List models
-    var modelsCmd='curl http://localhost:'+port+'/v1/models';
-    html+='<div class="rcard-title" style="margin-bottom:8px">Step 2 — Confirm Model Loaded</div>'+codeBlock('val-models',modelsCmd);
-    html+='<div style="font-size:11px;background:var(--bg-input);border-left:3px solid var(--accent);padding:6px 10px;border-radius:0 var(--r-sm) var(--r-sm) 0;margin-top:4px;margin-bottom:14px;color:var(--text-dim)">'+
-      '✓ <strong>Expected:</strong> JSON list containing your model id (<code>'+svcName+'</code>). '+
-      'If the model id is missing, the <code>--served-model-name</code> flag may be wrong — check the Configuration tab.'+
+  if(_exp==='beginner'){
+    html += '<div style="margin-bottom:14px;padding:12px 16px;background:var(--bg-input);border-radius:var(--r-md);font-size:12px;line-height:1.8;color:var(--text-dim)">'+
+      '<strong style="color:var(--text-hi);font-size:13px">What this tab covers</strong><br>'+
+      'Validation means checking that everything is working before you connect your application. '+
+      'Think of it as tasting the food before serving it to guests. '+
+      'Run each test from top to bottom — each one confirms a different part of the system is working.'+
     '</div>';
-
-    // Step 3: Inference test
-    var testPrompt=model.cat==='vlm'?'Describe what you see in this image.':'What is 2 + 2? Explain step by step.';
-    var inferCmd='curl http://localhost:'+port+'/v1/chat/completions \\\n'+
-      '  -H "Content-Type: application/json" \\\n'+
-      '  -d \'{\n    "model": "'+svcName+'",\n'+
-      '    "messages": [{"role":"user","content":"'+testPrompt+'"}],\n'+
-      '    "max_tokens": 100,\n'+
-      '    "temperature": 0.1\n  }\'';
-    html+='<div class="rcard-title" style="margin-bottom:8px">Step 3 — Test Inference</div>'+codeBlock('val-infer',inferCmd);
-    html+='<div style="font-size:11px;background:var(--bg-input);border-left:3px solid var(--accent);padding:6px 10px;border-radius:0 var(--r-sm) var(--r-sm) 0;margin-top:4px;margin-bottom:14px;color:var(--text-dim)">'+
-      '✓ <strong>Expected:</strong> JSON with <code>choices[0].message.content</code> containing a real answer. '+
-      'First request may be slow (model warming up) — run it twice. '+
-      'If you get a 400 error, check that <code>"model"</code> matches your served-model-name exactly.'+
-    '</div>';
-
-    // Step 4: Streaming test
-    var streamCmd='curl http://localhost:'+port+'/v1/chat/completions \\\n'+
-      '  -H "Content-Type: application/json" \\\n'+
-      '  -d \'{"model":"'+svcName+'","messages":[{"role":"user","content":"Count from 1 to 5."}],"stream":true,"max_tokens":50}\'';
-    html+='<div class="rcard-title" style="margin-bottom:8px">Step 4 — Test Streaming</div>'+codeBlock('val-stream',streamCmd);
-    html+='<div style="font-size:11px;background:var(--bg-input);border-left:3px solid var(--accent);padding:6px 10px;border-radius:0 var(--r-sm) var(--r-sm) 0;margin-top:4px;margin-bottom:14px;color:var(--text-dim)">'+
-      '✓ <strong>Expected:</strong> Multiple lines starting with <code>data: {…}</code> arriving in real time. '+
-      'The last line will be <code>data: [DONE]</code>. '+
-      'Streaming confirms the server is correctly handling long-running requests without timing out.'+
-    '</div>';
-
-    // Step 5: Performance benchmark
-    var benchCmd='# Quick throughput benchmark (install: pip install vllm)\npython -c "\nimport requests, time, json\nurl = \'http://localhost:'+port+'/v1/completions\'\npayload = {\'model\':\''+svcName+'\',\'prompt\':\'The history of the UAE is\',\'max_tokens\':200,\'temperature\':0}\nstart=time.time()\nr=requests.post(url,json=payload)\nelapsed=time.time()-start\ntoks=r.json()[\'usage\'][\'completion_tokens\']\nprint(f\'Tokens: {toks}, Time: {elapsed:.2f}s, TPS: {toks/elapsed:.1f}\')\n"';
-    html+='<div class="rcard-title" style="margin-bottom:8px">Step 5 — Performance Benchmark</div>'+codeBlock('val-bench',benchCmd);
-    var gpuKey=Object.keys(GPUS)[0];
-    html+='<div style="font-size:11px;background:var(--bg-input);border-left:3px solid var(--accent);padding:6px 10px;border-radius:0 var(--r-sm) var(--r-sm) 0;margin-top:4px;margin-bottom:14px;color:var(--text-dim)">'+
-      '✓ <strong>Expected throughput:</strong> '+model.benchTPS.a100+' tok/s on A100 &nbsp;·&nbsp; '+model.benchTPS.h100+' tok/s on H100. '+
-      'If you see < 10 tok/s, check the Troubleshoot tab for "Inference is very slow". '+
-      'Numbers below 50% of benchmark may indicate wrong tensor-parallel-size or NVLink not active.'+
-    '</div>';
-
-  } else if(model.cat==='embedding'||model.cat==='reranker'){
-    var embCmd='curl http://localhost:'+port+'/v1/embeddings \\\n'+
-      '  -H "Content-Type: application/json" \\\n'+
-      '  -d \'{"input":"Hello world","model":"'+svcName+'"}\'';
-    html+='<div class="rcard-title" style="margin-bottom:8px">Step 2 — Test Embedding</div>'+codeBlock('val-emb',embCmd);
-    html+='<div style="font-size:11px;color:var(--text-mute);margin-top:4px">Response should contain data[0].embedding (a vector of floats).</div>';
-
-  } else if(model.cat==='stt'){
-    var sttCmd='# Test with a WAV audio file:\ncurl http://localhost:8002/v1/audio/transcriptions \\\n'+
-      '  -H "Content-Type: multipart/form-data" \\\n'+
-      '  -F "file=@test.wav" \\\n'+
-      '  -F "model=whisper-1"\n\n# Expected: {"text": "...transcribed text..."}';
-    html+='<div class="rcard-title" style="margin-bottom:8px">Step 2 — Test Transcription</div>'+codeBlock('val-stt',sttCmd);
-
-  } else if(model.cat==='tts'){
-    var ttsCmd='curl http://localhost:8003/v1/audio/speech \\\n'+
-      '  -H "Content-Type: application/json" \\\n'+
-      '  -d \'{"input":"Hello, this is a test of the text to speech system.","voice":"af_bella"}\' \\\n'+
-      '  --output test.wav && aplay test.wav';
-    html+='<div class="rcard-title" style="margin-bottom:8px">Step 2 — Test Speech Synthesis</div>'+codeBlock('val-tts',ttsCmd);
   }
 
-  // GPU monitoring
-  var gpuMonCmd='# Monitor GPU utilisation during inference (run in separate terminal):\nwatch -n1 nvidia-smi\n\n# Or stream metrics:\nnvidia-smi dmon -s mu -d 1';
-  html+='<div class="rcard-title" style="margin-top:14px;margin-bottom:8px">GPU Monitoring</div>'+codeBlock('val-gpu',gpuMonCmd);
-  html+='<div style="font-size:11px;color:var(--text-mute);margin-top:4px">During inference, GPU utilisation should be 60–95%. If under 30%, check tensor parallelism settings.</div>';
+  var step = 1;
 
-  document.getElementById('validate-content').innerHTML=html;
+  // Pod health check
+  html += stepBlock(step++, 'Check the pod is running',
+    'A "pod" is Kubernetes\'s term for a running container. This command shows all pods in your AI workloads namespace and their current status.',
+    codeBlock('val-pods','kubectl get pods -n '+namespace+'\n\n# Watch it in real-time (press Ctrl+C to stop):\nkubectl get pods -n '+namespace+' -w'),
+    'You see your pod listed with status <strong>Running</strong> and READY showing <strong>1/1</strong>.',
+    'If status is "Pending": not enough GPU resources. If "CrashLoopBackOff": check logs with <code>kubectl logs -n '+namespace+' &lt;pod-name&gt;</code>. If "ImagePullBackOff": the Docker image is not in your registry.',
+    'A new pod may take 2–10 minutes to reach Running state — especially for large models that take time to load.'
+  );
+
+  // Port forward for testing
+  html += stepBlock(step++, 'Open a connection to the service for testing',
+    'The AI service runs inside Kubernetes which is isolated from your regular network. '+
+    'Port-forwarding creates a temporary tunnel from your laptop/terminal to the service so you can test it. '+
+    'Think of it as poking a hole in the wall just for testing.',
+    codeBlock('val-pf','# Run this in a SEPARATE terminal window (keep it open while testing):\nkubectl port-forward -n '+namespace+' svc/'+svcName+'-svc '+port+':'+port+'\n\n# You should see: "Forwarding from 127.0.0.1:'+port+' -> '+port+'"'),
+    'You see "Forwarding from 127.0.0.1:'+port+' -&gt; '+port+'". Leave this terminal open and run the next steps in a different terminal.',
+    null,
+    'If you get "Error from server (NotFound)": the service name may be slightly different. Check with <code>kubectl get svc -n '+namespace+'</code>.'
+  );
+
+  // Health endpoint
+  html += stepBlock(step++, 'Check the health endpoint',
+    'Every AI service has a /health URL that returns "ok" when it\'s ready. This is the quickest way to confirm the service is responding.',
+    codeBlock('val-health','curl http://localhost:'+port+'/health'),
+    'You get back <code>{"status":"ok"}</code> or just <code>{"message":"ok"}</code>. Any 200 response means the service is healthy.',
+    'If you get "Connection refused": either the port-forward from Step 2 is not running, or the pod is still starting up. Wait 2 minutes and try again.',
+    null
+  );
+
+  if(model.cat==='llm'||model.cat==='vlm'){
+    html += stepBlock(step++, 'Confirm the model is loaded',
+      'This checks that the model was loaded successfully and is responding to the API.',
+      codeBlock('val-models','curl http://localhost:'+port+'/v1/models'),
+      'You see a JSON response containing the model name <code>'+svcName+'</code>.',
+      null, null
+    );
+
+    html += stepBlock(step++, 'Send your first AI request',
+      'This sends a simple question to the AI and gets a response back. This is the most important test — if this works, your deployment is successful.',
+      codeBlock('val-chat','curl http://localhost:'+port+'/v1/chat/completions \\\n  -H "Content-Type: application/json" \\\n  -d \'{"model":"'+svcName+'","messages":[{"role":"user","content":"Say hello and confirm you are working."}],"max_tokens":100}\''),
+      'You get a JSON response with <code>choices[0].message.content</code> containing a reply from the AI. If you see actual text in the content field, your deployment is 100% working.',
+      'If you get a 422 error: the model name in the request must match exactly — use <code>'+svcName+'</code>.',
+      'The first request after startup may take 5–10 seconds (model warming up). Subsequent requests are faster.'
+    );
+
+    if(_exp!=='expert'){
+      html += stepBlock(step++, 'Check response speed (optional)',
+        'This measures how fast the model responds under load. A healthy deployment should respond to requests in a reasonable time.',
+        codeBlock('val-perf',
+          '# Send 5 requests and time how long it takes:\nfor i in 1 2 3 4 5; do\n  time curl -s http://localhost:'+port+'/v1/chat/completions \\\n    -H "Content-Type: application/json" \\\n    -d \'{"model":"'+svcName+'","messages":[{"role":"user","content":"Say one word."}],"max_tokens":10}\' > /dev/null\ndone\n\n# Check GPU utilisation while running:\nnvidia-smi dmon -s mu -d 1'
+        ),
+        'Each request completes in under 5 seconds for a 7B model. GPU utilisation shows above 50% during inference.',
+        null,
+        'Very slow responses (&gt;30s) indicate either the model is too large for your GPU, or tensor parallelism is not working correctly.'
+      );
+    }
+
+  } else if(model.cat==='embedding'){
+    html += stepBlock(step++, 'Test embedding generation',
+      'This sends a sentence to the embedding model and gets back a vector (a list of numbers that represents the meaning of the sentence).',
+      codeBlock('val-embed','curl http://localhost:'+port+'/v1/embeddings \\\n  -H "Content-Type: application/json" \\\n  -d \'{"input":"The weather is sunny today","model":"'+svcName+'"}\''),
+      'You get a JSON response with <code>data[0].embedding</code> containing a long array of numbers (the vector). If you see numbers, the embedding model is working.',
+      null, null
+    );
+  } else if(model.cat==='reranker'){
+    html += stepBlock(step++, 'Test reranking',
+      'This sends a query and two candidate texts to the reranker. It should score the more relevant text higher.',
+      codeBlock('val-rerank','curl http://localhost:'+port+'/rerank \\\n  -H "Content-Type: application/json" \\\n  -d \'{"query":"What is artificial intelligence?","texts":["AI is the simulation of human intelligence in machines.","The sun rises in the east."]}\''),
+      'You get scores for both texts. The first text (about AI) should have a higher score than the second (about the sun).',
+      null, null
+    );
+  } else if(model.cat==='stt'){
+    html += stepBlock(step++, 'Test transcription',
+      'This sends an audio file and gets back a text transcription.',
+      codeBlock('val-stt','# First create a short test audio file (requires arecord):\narecord -d 3 -f S16_LE -r 16000 test.wav\n\n# Then transcribe it:\ncurl http://localhost:8002/v1/audio/transcriptions \\\n  -F "file=@test.wav" \\\n  -F "model=whisper-1"'),
+      'You get a JSON response with <code>text</code> containing the transcription of what you said.',
+      null, null
+    );
+  } else if(model.cat==='tts'){
+    html += stepBlock(step++, 'Test speech synthesis',
+      'This sends text and gets back an audio file.',
+      codeBlock('val-tts','curl http://localhost:8003/v1/audio/speech \\\n  -H "Content-Type: application/json" \\\n  -d \'{"input":"Hello, this deployment test is successful.","voice":"af_bella"}\' \\\n  --output test_output.wav\naplay test_output.wav'),
+      'You hear the spoken text through your speakers. The test_output.wav file is created and playable.',
+      null, null
+    );
+  }
+
+  if(_exp!=='expert'){
+    html += stepBlock(step, 'Connect your application',
+      'Your AI service is working. Here is how to point your applications at it using the stable in-cluster address (not port-forward — that\'s only for testing).',
+      codeBlock('val-connect',
+        '# In-cluster URL (use this inside your application code):\n# http://'+svcName+'-svc.'+namespace+'.svc.cluster.local:'+port+'\n\n# From outside the cluster, use port-forward or configure an Ingress:\nkubectl port-forward -n '+namespace+' svc/'+svcName+'-svc '+port+':'+port+' &\n\n# Example Python call to your deployed model:\n# pip install openai\n# from openai import OpenAI\n# client = OpenAI(base_url="http://localhost:'+port+'/v1", api_key="none")\n# response = client.chat.completions.create(\n#     model="'+svcName+'",\n#     messages=[{"role":"user","content":"Your question here"}]\n# )\n# print(response.choices[0].message.content)'
+      ),
+      'Your application can successfully call the AI model and receive responses.',
+      null,
+      'The OpenAI-compatible API means any application that works with OpenAI\'s API also works with this deployment — just change the base_url.'
+    );
+  }
+
+  document.getElementById('validate-content').innerHTML = html;
 }
 
 /* ═══════════════════════════════════════
@@ -1955,6 +2265,8 @@ document.addEventListener('DOMContentLoaded',function(){
   var t=localStorage.getItem('gpu_calc_theme');
   var btn=document.getElementById('theme-btn');
   if(t==='light'){document.body.classList.add('light');if(btn)btn.textContent='Dark';}
+  var savedExp=localStorage.getItem('mda_exp');
+  if(savedExp)setExp(savedExp);
   onUseCaseChange();
 });
 </script>
