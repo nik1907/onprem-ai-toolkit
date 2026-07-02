@@ -142,6 +142,23 @@
     .sum-v.amber{color:var(--warn-amber);}
     .sum-v.red{color:var(--warn-red);}
     .sum-l{font-size:10px;color:var(--text-mute);margin-top:4px;}
+    /* System stack component cards */
+    .comp-card{background:var(--bg-card2);border:1px solid var(--border-hi);border-radius:var(--r-md);padding:10px 12px;margin-bottom:8px;}
+    .comp-card.optional-off{opacity:0.5;}
+    .cc-header{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+    .cc-num{width:20px;height:20px;border-radius:50%;background:var(--accent);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+    .cc-label{font-size:12px;font-weight:600;color:var(--text-hi);flex:1;}
+    .cc-badge{font-size:10px;font-weight:700;color:var(--accent);background:var(--accent-tint);border:1px solid var(--accent-glow);border-radius:var(--r-pill);padding:2px 7px;white-space:nowrap;}
+    .cc-sublabel{font-size:10px;color:var(--text-mute);margin-bottom:5px;}
+    .cc-optional{font-size:10px;color:var(--text-mute);margin-top:5px;display:flex;align-items:center;gap:6px;}
+    .cc-optional input[type=checkbox]{accent-color:var(--accent);width:12px;height:12px;}
+    .stack-arch{font-size:10px;color:var(--accent);font-weight:600;margin-top:6px;font-family:'SF Mono',Consolas,monospace;}
+    .stack-total{background:var(--accent-tint);border:1px solid var(--accent-glow);border-radius:var(--r-md);padding:8px 12px;margin-top:8px;font-size:12px;color:var(--text-hi);}
+    .stack-total-num{font-size:18px;font-weight:700;color:var(--accent);}
+    /* Section dividers in tabs for multi-component output */
+    .comp-section{margin-top:18px;margin-bottom:10px;padding:8px 12px;background:var(--accent-tint);border-left:3px solid var(--accent);border-radius:0 var(--r-sm) var(--r-sm) 0;}
+    .comp-section-title{font-size:12px;font-weight:700;color:var(--accent);}
+    .comp-section-sub{font-size:11px;color:var(--text-dim);margin-top:2px;}
     /* VRAM breakdown */
     .vram-breakdown{background:var(--bg-input);border:1px solid var(--border-hi);border-radius:var(--r-md);padding:10px 14px;margin-bottom:10px;font-size:12px;}
     .vb-title{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;}
@@ -198,31 +215,47 @@
   <div class="left">
 
     <div class="card">
-      <div class="card-title">Use Case &amp; Model</div>
+      <div class="card-title">What Are You Building?</div>
       <div class="field">
-        <label for="inp-usecase">Deployment goal</label>
+        <label for="inp-usecase">Deployment type</label>
         <select class="sinp" id="inp-usecase" onchange="onUseCaseChange()">
-          <option value="chat">Chat / Q&amp;A assistant</option>
-          <option value="rag">RAG / Document search</option>
-          <option value="code">Code assistant</option>
-          <option value="stt">Speech-to-Text (STT)</option>
-          <option value="tts">Text-to-Speech (TTS)</option>
-          <option value="vlm">Image / Document understanding (VLM)</option>
-          <option value="search">Semantic search / Embedding</option>
-          <option value="agent">Agentic AI orchestrator</option>
+          <optgroup label="Complete AI Systems">
+            <option value="sys-rag">RAG — Document Q&amp;A</option>
+            <option value="sys-voice">Voice Assistant</option>
+            <option value="sys-doc">Document Understanding</option>
+            <option value="sys-agentic">Agentic AI</option>
+            <option value="sys-code">Code Assistant</option>
+          </optgroup>
+          <optgroup label="Single Model Deployment">
+            <option value="chat">Single LLM — Chat / Q&amp;A</option>
+            <option value="rag">Single LLM — RAG focused</option>
+            <option value="code">Single Code LLM</option>
+            <option value="stt">Speech-to-Text only</option>
+            <option value="tts">Text-to-Speech only</option>
+            <option value="vlm">Vision Model only</option>
+            <option value="search">Embedding / Search only</option>
+            <option value="agent">Single LLM — Agentic</option>
+          </optgroup>
         </select>
       </div>
-      <div class="field">
-        <label for="inp-model">Model (open source only)</label>
-        <select class="sinp" id="inp-model" onchange="generate()"></select>
-      </div>
-      <div class="field">
-        <label for="inp-quant">Precision / Quantization</label>
-        <select class="sinp" id="inp-quant" onchange="generate()">
-          <option value="fp16">FP16 / BF16 — best quality</option>
-          <option value="int8">INT8 — half VRAM, ~1% quality loss</option>
-          <option value="int4">INT4 — quarter VRAM, moderate quality loss</option>
-        </select>
+      <!-- System stack description (shown for sys-* selections) -->
+      <div id="stack-desc" style="display:none;font-size:11px;color:var(--text-dim);background:var(--bg-input);border-radius:var(--r-md);padding:8px 10px;margin-top:4px;line-height:1.6;"></div>
+      <!-- Multi-component cards (sys-* mode) -->
+      <div id="stack-components" style="display:none;margin-top:8px;"></div>
+      <!-- Single model fields (single mode) -->
+      <div id="single-model-fields">
+        <div class="field">
+          <label for="inp-model">Model (open source only)</label>
+          <select class="sinp" id="inp-model" onchange="generate()"></select>
+        </div>
+        <div class="field">
+          <label for="inp-quant">Precision / Quantization</label>
+          <select class="sinp" id="inp-quant" onchange="generate()">
+            <option value="fp16">FP16 / BF16 — best quality</option>
+            <option value="int8">INT8 — half VRAM, ~1% quality loss</option>
+            <option value="int4">INT4 — quarter VRAM, moderate quality loss</option>
+          </select>
+        </div>
       </div>
     </div>
 
@@ -400,7 +433,7 @@ var MODELS = {
     authNote:'Must accept Meta license at huggingface.co/meta-llama/Meta-Llama-3.1-8B-Instruct before download',
     maxCtx:131072, defaultCtx:8192, arabic:true,
     frameworks:['vllm','ollama','tgi'], ollamaTag:'llama3.1:8b', vllmDtype:'bfloat16',
-    dockerImg:'vllm/vllm-openai:v0.6.4.post1',
+    dockerImg:'vllm/vllm-openai:v0.8.5',
     shards:'4 safetensor shards', downloadFiles:['model-0000{1-4}-of-00004.safetensors','config.json','tokenizer.json','tokenizer_config.json','generation_config.json'],
     arch:{layers:32,kv_heads:8,head_dim:128},
     benchTPS:{a100:'120–180',h100:'200–320'}, benchUnit:'tok/s',
@@ -414,7 +447,7 @@ var MODELS = {
     authNote:'Must accept Meta license at huggingface.co/meta-llama/Meta-Llama-3.1-70B-Instruct before download',
     maxCtx:131072, defaultCtx:8192, arabic:true,
     frameworks:['vllm','tgi'], ollamaTag:'llama3.1:70b', vllmDtype:'bfloat16',
-    dockerImg:'vllm/vllm-openai:v0.6.4.post1',
+    dockerImg:'vllm/vllm-openai:v0.8.5',
     shards:'16 safetensor shards', downloadFiles:['model-0000{1-16}-of-00016.safetensors','config.json','tokenizer.json','tokenizer_config.json','generation_config.json'],
     arch:{layers:80,kv_heads:8,head_dim:128},
     benchTPS:{a100:'30–50',h100:'60–90'}, benchUnit:'tok/s',
@@ -427,7 +460,7 @@ var MODELS = {
     license:'Apache 2.0', requiresAuth:false,
     maxCtx:131072, defaultCtx:8192, arabic:true,
     frameworks:['vllm','ollama','tgi'], ollamaTag:'qwen2.5:7b', vllmDtype:'bfloat16',
-    dockerImg:'vllm/vllm-openai:v0.6.4.post1',
+    dockerImg:'vllm/vllm-openai:v0.8.5',
     shards:'4 safetensor shards', downloadFiles:['model-0000{1-4}-of-00004.safetensors','config.json','tokenizer.json','tokenizer_config.json'],
     arch:{layers:28,kv_heads:4,head_dim:128},
     benchTPS:{a100:'130–200',h100:'220–340'}, benchUnit:'tok/s',
@@ -440,7 +473,7 @@ var MODELS = {
     license:'Qwen License (commercial allowed)', requiresAuth:false,
     maxCtx:131072, defaultCtx:8192, arabic:true,
     frameworks:['vllm','tgi'], ollamaTag:'qwen2.5:72b', vllmDtype:'bfloat16',
-    dockerImg:'vllm/vllm-openai:v0.6.4.post1',
+    dockerImg:'vllm/vllm-openai:v0.8.5',
     shards:'16 safetensor shards', downloadFiles:['model-0000{1-16}-of-00016.safetensors','config.json','tokenizer.json','tokenizer_config.json'],
     arch:{layers:80,kv_heads:8,head_dim:128},
     benchTPS:{a100:'28–45',h100:'55–85'}, benchUnit:'tok/s',
@@ -453,7 +486,7 @@ var MODELS = {
     license:'Apache 2.0', requiresAuth:false,
     maxCtx:32768, defaultCtx:8192, arabic:false,
     frameworks:['vllm','ollama','tgi'], ollamaTag:'mistral:7b', vllmDtype:'bfloat16',
-    dockerImg:'vllm/vllm-openai:v0.6.4.post1',
+    dockerImg:'vllm/vllm-openai:v0.8.5',
     shards:'1 safetensor file', downloadFiles:['model.safetensors','config.json','tokenizer.json','tokenizer.model.v3','tokenizer_config.json'],
     arch:{layers:32,kv_heads:8,head_dim:128},
     benchTPS:{a100:'140–210',h100:'230–360'}, benchUnit:'tok/s',
@@ -466,7 +499,7 @@ var MODELS = {
     license:'MIT', requiresAuth:false,
     maxCtx:16384, defaultCtx:8192, arabic:false,
     frameworks:['vllm','ollama'], ollamaTag:'phi4', vllmDtype:'bfloat16',
-    dockerImg:'vllm/vllm-openai:v0.6.4.post1',
+    dockerImg:'vllm/vllm-openai:v0.8.5',
     shards:'6 safetensor shards', downloadFiles:['model-0000{1-6}-of-00006.safetensors','config.json','tokenizer.json','tokenizer_config.json'],
     arch:{layers:40,kv_heads:10,head_dim:128},
     benchTPS:{a100:'80–130',h100:'140–220'}, benchUnit:'tok/s',
@@ -479,7 +512,7 @@ var MODELS = {
     license:'MIT', requiresAuth:false,
     maxCtx:131072, defaultCtx:8192, arabic:false,
     frameworks:['vllm','ollama'], ollamaTag:'deepseek-r1:7b', vllmDtype:'bfloat16',
-    dockerImg:'vllm/vllm-openai:v0.6.4.post1',
+    dockerImg:'vllm/vllm-openai:v0.8.5',
     shards:'4 safetensor shards', downloadFiles:['model-0000{1-4}-of-00004.safetensors','config.json','tokenizer.json'],
     arch:{layers:28,kv_heads:4,head_dim:128},
     benchTPS:{a100:'120–180',h100:'200–310'}, benchUnit:'tok/s',
@@ -492,7 +525,7 @@ var MODELS = {
     license:'Apache 2.0', requiresAuth:false,
     maxCtx:131072, defaultCtx:8192, arabic:false,
     frameworks:['vllm','ollama','tgi'], ollamaTag:'qwen2.5-coder:7b', vllmDtype:'bfloat16',
-    dockerImg:'vllm/vllm-openai:v0.6.4.post1',
+    dockerImg:'vllm/vllm-openai:v0.8.5',
     shards:'4 safetensor shards', downloadFiles:['model-0000{1-4}-of-00004.safetensors','config.json','tokenizer.json'],
     arch:{layers:28,kv_heads:4,head_dim:128},
     benchTPS:{a100:'130–200',h100:'220–340'}, benchUnit:'tok/s',
@@ -505,7 +538,7 @@ var MODELS = {
     license:'Apache 2.0', requiresAuth:false,
     maxCtx:131072, defaultCtx:8192, arabic:false,
     frameworks:['vllm','tgi'], ollamaTag:'qwen2.5-coder:32b', vllmDtype:'bfloat16',
-    dockerImg:'vllm/vllm-openai:v0.6.4.post1',
+    dockerImg:'vllm/vllm-openai:v0.8.5',
     shards:'8 safetensor shards', downloadFiles:['model-0000{1-8}-of-00008.safetensors','config.json','tokenizer.json'],
     arch:{layers:64,kv_heads:8,head_dim:128},
     benchTPS:{a100:'55–85',h100:'95–150'}, benchUnit:'tok/s',
@@ -613,7 +646,7 @@ var MODELS = {
     license:'Apache 2.0', requiresAuth:false,
     maxCtx:32768, defaultCtx:8192, arabic:true,
     frameworks:['vllm','ollama'], ollamaTag:'qwen2-vl:7b', vllmDtype:'bfloat16',
-    dockerImg:'vllm/vllm-openai:v0.6.4.post1',
+    dockerImg:'vllm/vllm-openai:v0.8.5',
     shards:'4 safetensor shards', downloadFiles:['model-0000{1-4}-of-00004.safetensors','config.json','preprocessor_config.json','tokenizer.json'],
     arch:{layers:28,kv_heads:4,head_dim:128},
     benchTPS:{a100:'60–100',h100:'110–170'}, benchUnit:'tok/s',
@@ -626,7 +659,7 @@ var MODELS = {
     license:'MIT', requiresAuth:false,
     maxCtx:131072, defaultCtx:8192, arabic:false,
     frameworks:['vllm'], ollamaTag:null, vllmDtype:'bfloat16',
-    dockerImg:'vllm/vllm-openai:v0.6.4.post1',
+    dockerImg:'vllm/vllm-openai:v0.8.5',
     shards:'6 safetensor shards', downloadFiles:['model-0000{1-6}-of-00006.safetensors','config.json','preprocessor_config.json','tokenizer.json'],
     arch:{layers:40,kv_heads:10,head_dim:128},
     benchTPS:{a100:'45–75',h100:'80–130'}, benchUnit:'tok/s',
@@ -643,6 +676,56 @@ var USE_CASES = {
   'vlm':    { label:'Image / Doc Understanding', models:['qwen2-vl-7b','phi4-vision'] },
   'search': { label:'Semantic Search',       models:['bge-m3','bge-large-en','bge-reranker-v2'] },
   'agent':  { label:'Agentic AI',            models:['qwen25-7b','llama31-8b','qwen25-72b','llama31-70b','phi4'] },
+};
+
+var SYSTEM_STACKS = {
+  'sys-rag': {
+    label:'RAG — Document Q&A',
+    desc:'Users ask questions and the AI finds answers from your internal documents. The embedding model converts text to vectors for fast search, the reranker picks the best results, and the LLM writes a precise answer.',
+    arch:'User → Embedding (find docs) → Reranker (rank) → LLM (answer)',
+    components:[
+      {id:'llm',   label:'Language Model',   sublabel:'Generates the answer',                   usecase:'rag',    defaultModel:'qwen25-7b',        optional:false},
+      {id:'embed', label:'Embedding Model',  sublabel:'Finds relevant documents via vector search', usecase:'search', defaultModel:'bge-m3',           optional:false},
+      {id:'rerank',label:'Reranker',         sublabel:'Improves search accuracy (optional)',     usecase:'search', defaultModel:'bge-reranker-v2',   optional:true}
+    ]
+  },
+  'sys-voice': {
+    label:'Voice Assistant',
+    desc:'Users speak and hear AI responses. Every query flows through all three models in sequence: speech-to-text transcribes the audio, the LLM generates a response, and text-to-speech speaks it aloud.',
+    arch:'Microphone → STT (transcribe) → LLM (answer) → TTS (speak)',
+    components:[
+      {id:'stt', label:'Speech to Text',   sublabel:'Transcribes spoken audio to text',         usecase:'stt',  defaultModel:'whisper-large-v3', optional:false},
+      {id:'llm', label:'Language Model',   sublabel:'Understands and generates the response',   usecase:'chat', defaultModel:'qwen25-7b',        optional:false},
+      {id:'tts', label:'Text to Speech',   sublabel:'Converts the AI response to spoken audio', usecase:'tts',  defaultModel:'kokoro-82m',        optional:false}
+    ]
+  },
+  'sys-doc': {
+    label:'Document Understanding',
+    desc:'AI reads images, PDFs, charts, diagrams, and handwriting. The vision model understands visual content that standard OCR cannot. Add an embedding model to make a searchable document index.',
+    arch:'Document/Image → VLM (reads & understands) → Embedding (index for search)',
+    components:[
+      {id:'vlm',   label:'Vision Language Model', sublabel:'Reads images, PDFs, charts, handwriting', usecase:'vlm',    defaultModel:'qwen2-vl-7b', optional:false},
+      {id:'embed', label:'Embedding Model',       sublabel:'Indexes documents for semantic search',   usecase:'search', defaultModel:'bge-m3',       optional:true}
+    ]
+  },
+  'sys-agentic': {
+    label:'Agentic AI',
+    desc:'AI that autonomously plans multi-step tasks, uses tools (search, code execution, APIs), and makes decisions. Needs a large, highly capable model for reasoning plus an embedding model for memory and knowledge retrieval.',
+    arch:'Task → Agent LLM (plan & decide) → Tools → Embedding (memory & knowledge)',
+    components:[
+      {id:'llm',   label:'Agent Brain',    sublabel:'Large model — plans tasks and makes decisions', usecase:'agent',  defaultModel:'qwen25-72b', optional:false},
+      {id:'embed', label:'Agent Memory',   sublabel:'Long-term memory and knowledge retrieval',      usecase:'search', defaultModel:'bge-m3',      optional:false}
+    ]
+  },
+  'sys-code': {
+    label:'Code Assistant',
+    desc:'AI helps developers write, review, debug, and explain code. Specialized code models significantly outperform general models. Add semantic code search to find similar code across large codebases.',
+    arch:'Developer → Code LLM (write/review) → Embedding (search codebase)',
+    components:[
+      {id:'llm',   label:'Code Language Model', sublabel:'Writes, reviews, and explains code',     usecase:'code',   defaultModel:'qwen25-coder-32b', optional:false},
+      {id:'embed', label:'Code Search Index',   sublabel:'Finds similar code and documentation',   usecase:'search', defaultModel:'bge-m3',            optional:true}
+    ]
+  }
 };
 
 /* ═══════════════════════════════════════
@@ -662,14 +745,22 @@ function toggleTheme(){
 /* ═══════════════════════════════════════
    INIT
 ═══════════════════════════════════════ */
-document.addEventListener('DOMContentLoaded',function(){
-  populateModels('chat');
-  generate();
-});
+function isStackMode(){
+  var uc=document.getElementById('inp-usecase').value;
+  return uc.indexOf('sys-')===0;
+}
 
 function onUseCaseChange(){
   var uc=document.getElementById('inp-usecase').value;
-  populateModels(uc);
+  var stackMode=uc.indexOf('sys-')===0;
+  document.getElementById('single-model-fields').style.display=stackMode?'none':'';
+  document.getElementById('stack-components').style.display=stackMode?'':'none';
+  document.getElementById('stack-desc').style.display=stackMode?'':'none';
+  if(stackMode){
+    populateStackComponents(uc);
+  } else {
+    populateModels(uc);
+  }
 }
 
 function populateModels(uc){
@@ -683,6 +774,99 @@ function populateModels(uc){
     sel.appendChild(o);
   });
   generate();
+}
+
+function populateStackComponents(stackKey){
+  var stack=SYSTEM_STACKS[stackKey];
+  if(!stack)return;
+  var descEl=document.getElementById('stack-desc');
+  descEl.innerHTML='<strong style="color:var(--text-hi)">'+stack.label+'</strong><br>'+stack.desc+
+    '<div class="stack-arch">'+stack.arch+'</div>';
+
+  var gpu=GPUS[document.getElementById('inp-gpu').value];
+  var gpuCount=Math.max(1,parseInt(document.getElementById('inp-gpucount').value)||1);
+  var ctx=parseInt(document.getElementById('inp-ctx').value)||8192;
+  var maxSeqs=Math.max(1,parseInt(document.getElementById('inp-maxseqs').value)||10);
+  var quant=document.getElementById('inp-quant')?document.getElementById('inp-quant').value:'fp16';
+
+  var html='';
+  stack.components.forEach(function(comp,i){
+    var modelIds=(USE_CASES[comp.usecase]||USE_CASES.chat).models;
+    var opts='';
+    modelIds.forEach(function(mid){
+      var m=MODELS[mid];if(!m)return;
+      var sel=mid===comp.defaultModel?' selected':'';
+      opts+='<option value="'+mid+'"'+sel+'>'+m.name+' ('+m.params+')</option>';
+    });
+    // Quick GPU estimate for default model
+    var defModel=MODELS[comp.defaultModel]||MODELS[modelIds[0]];
+    var badge='—';
+    if(defModel){
+      var D=calcDeployment(defModel,gpu,gpuCount,quant,ctx,maxSeqs);
+      badge=D.gpusUsed+' GPU'+(D.gpusUsed!==1?'s':'');
+    }
+    var optCheck=comp.optional?
+      '<div class="cc-optional"><input type="checkbox" id="comp-opt-'+i+'" checked onchange="onCompToggle('+i+')"><label for="comp-opt-'+i+'">Include this component</label></div>':
+      '';
+    html+='<div class="comp-card" id="comp-card-'+i+'">'+
+      '<div class="cc-header">'+
+        '<div class="cc-num">'+(i+1)+'</div>'+
+        '<div class="cc-label">'+comp.label+'</div>'+
+        '<div class="cc-badge" id="comp-badge-'+i+'">'+badge+'</div>'+
+      '</div>'+
+      '<div class="cc-sublabel">'+comp.sublabel+'</div>'+
+      '<select class="sinp" id="comp-model-'+i+'" style="font-size:12px" onchange="onCompModelChange('+i+')">'+opts+'</select>'+
+      optCheck+
+    '</div>';
+  });
+
+  document.getElementById('stack-components').innerHTML=html;
+  generateStack();
+}
+
+function onCompModelChange(i){
+  // Update the badge for this component
+  var stackKey=document.getElementById('inp-usecase').value;
+  var stack=SYSTEM_STACKS[stackKey];
+  if(!stack||i>=stack.components.length)return;
+  var modelId=document.getElementById('comp-model-'+i).value;
+  var model=MODELS[modelId];
+  if(model){
+    var gpu=GPUS[document.getElementById('inp-gpu').value];
+    var gpuCount=Math.max(1,parseInt(document.getElementById('inp-gpucount').value)||1);
+    var ctx=parseInt(document.getElementById('inp-ctx').value)||8192;
+    var maxSeqs=Math.max(1,parseInt(document.getElementById('inp-maxseqs').value)||10);
+    var quant='fp16';
+    var D=calcDeployment(model,gpu,gpuCount,quant,ctx,maxSeqs);
+    var badge=document.getElementById('comp-badge-'+i);
+    if(badge)badge.textContent=D.gpusUsed+' GPU'+(D.gpusUsed!==1?'s':'');
+  }
+  generateStack();
+}
+
+function onCompToggle(i){
+  var card=document.getElementById('comp-card-'+i);
+  var chk=document.getElementById('comp-opt-'+i);
+  if(card)card.classList.toggle('optional-off',!chk.checked);
+  generateStack();
+}
+
+function getActiveComponents(stackKey){
+  var stack=SYSTEM_STACKS[stackKey];
+  if(!stack)return[];
+  var result=[];
+  stack.components.forEach(function(comp,i){
+    var optChk=document.getElementById('comp-opt-'+i);
+    if(comp.optional && optChk && !optChk.checked)return;
+    var modelId=document.getElementById('comp-model-'+i);
+    result.push({
+      comp:comp,
+      idx:i,
+      modelId:modelId?modelId.value:comp.defaultModel,
+      model:MODELS[modelId?modelId.value:comp.defaultModel]
+    });
+  });
+  return result;
 }
 
 /* ═══════════════════════════════════════
@@ -770,6 +954,7 @@ function calcDeployment(model,gpu,gpuCount,quant,ctx,maxSeqs){
 }
 
 function generate(){
+  if(isStackMode()){generateStack();return;}
   var modelId=document.getElementById('inp-model').value;
   if(!modelId){showEmpty();return;}
   var model=MODELS[modelId]; if(!model){showEmpty();return;}
@@ -804,6 +989,364 @@ function generate(){
 function showEmpty(){
   document.getElementById('empty-state').style.display='';
   document.getElementById('results-area').style.display='none';
+}
+
+/* ═══════════════════════════════════════
+   STACK BUILD FUNCTIONS
+═══════════════════════════════════════ */
+function generateStack(){
+  var stackKey=document.getElementById('inp-usecase').value;
+  var stack=SYSTEM_STACKS[stackKey];
+  if(!stack){showEmpty();return;}
+
+  var gpu=GPUS[document.getElementById('inp-gpu').value];
+  var gpuCount=Math.max(1,parseInt(document.getElementById('inp-gpucount').value)||1);
+  var ctx=parseInt(document.getElementById('inp-ctx').value)||8192;
+  var maxSeqs=Math.max(1,parseInt(document.getElementById('inp-maxseqs').value)||10);
+  var namespace=document.getElementById('inp-namespace').value||'ai-workloads';
+  var storePath=document.getElementById('inp-storepath').value||'/mnt/ai-models';
+  var registry=document.getElementById('inp-registry').value||'registry.internal:5000';
+  var quant='fp16';
+
+  var activeComps=getActiveComponents(stackKey);
+  if(!activeComps.length){showEmpty();return;}
+
+  var results=activeComps.map(function(ac){
+    if(!ac.model)return null;
+    return calcDeployment(ac.model,gpu,gpuCount,quant,ctx,maxSeqs);
+  }).filter(Boolean);
+
+  if(!results.length){showEmpty();return;}
+
+  // Update GPU badges on each component card
+  activeComps.forEach(function(ac,i){
+    var badge=document.getElementById('comp-badge-'+ac.idx);
+    if(badge&&results[i])badge.textContent=results[i].gpusUsed+' GPU'+(results[i].gpusUsed!==1?'s':'');
+  });
+
+  var totalGPUs=results.reduce(function(s,D){return s+D.gpusUsed;},0);
+
+  buildStackSummary(stack,activeComps,results,totalGPUs,gpu,gpuCount);
+  buildStackDownload(activeComps,results,storePath,registry);
+  buildStackPrereqs(gpu,gpuCount,namespace,storePath,registry,activeComps,results);
+  buildStackConfig(activeComps,results,storePath,registry,namespace,ctx,maxSeqs,quant);
+  buildStackK8s(activeComps,results,gpu,gpuCount,quant,ctx,maxSeqs,storePath,registry,namespace);
+  buildStackValidate(activeComps,namespace);
+  buildStackTroubleshoot(activeComps,results,gpu,gpuCount,quant);
+
+  document.getElementById('empty-state').style.display='none';
+  document.getElementById('results-area').style.display='block';
+}
+
+function buildStackSummary(stack,activeComps,results,totalGPUs,gpu,gpuCount){
+  var allFit=results.every(function(D){return D.fits;});
+  var sumGrid=
+    '<div class="sum-box"><div class="sum-v '+(allFit?'green':'red')+'">'+totalGPUs+' / '+gpuCount+'</div><div class="sum-l">Total GPUs used / available</div></div>'+
+    '<div class="sum-box"><div class="sum-v">'+activeComps.length+'</div><div class="sum-l">Components in system</div></div>'+
+    '<div class="sum-box"><div class="sum-v">'+gpu.name+'</div><div class="sum-l">GPU type</div></div>';
+  document.getElementById('sum-grid').innerHTML=sumGrid;
+
+  var breakdown='<div class="vram-breakdown"><div class="vb-title">'+stack.label+' — Component Breakdown</div>';
+  activeComps.forEach(function(ac,i){
+    var D=results[i];if(!D)return;
+    var m=ac.model;if(!m)return;
+    breakdown+='<div class="vb-row">'+
+      '<span><strong style="color:var(--accent)">'+(i+1)+'. '+ac.comp.label+'</strong> — '+m.name+'</span>'+
+      '<span>'+D.gpusUsed+' GPU'+(D.gpusUsed!==1?'s':'')+' ('+D.util+'% VRAM)</span>'+
+    '</div>';
+  });
+  breakdown+='<div class="vb-row vb-total"><span>Total GPUs required</span><span>'+totalGPUs+' GPU'+(totalGPUs!==1?'s':'')+' across '+activeComps.length+' services</span></div>';
+  breakdown+='</div>';
+  document.getElementById('sum-vram').innerHTML=breakdown;
+
+  var warns='';
+  if(!allFit)warns+='<div class="warn-box red">⚠ One or more components need more GPUs than available. Add GPUs or reduce concurrent users.</div>';
+  if(totalGPUs>gpuCount)warns+='<div class="warn-box amber">⚠ Total GPUs needed ('+totalGPUs+') exceeds available ('+gpuCount+'). Increase GPU count in Infrastructure settings.</div>';
+  document.getElementById('sum-warnings').innerHTML=warns;
+  document.getElementById('sum-notes').textContent=stack.desc;
+}
+
+function buildStackDownload(activeComps,results,storePath,registry){
+  var html='<div style="margin-bottom:12px;padding:10px 14px;background:var(--bg-input);border-radius:var(--r-md);font-size:12px;color:var(--text-dim);line-height:1.7">'+
+    '<strong style="color:var(--text-hi)">This system needs '+activeComps.length+' models. Download all before going air-gapped.</strong><br>'+
+    '🖥 Steps 1–'+activeComps.length+': Download each model on an internet-connected machine.<br>'+
+    '📦 Transfer all model folders to your air-gapped NFS storage mount.<br>'+
+    '🐳 Pull all Docker images and push to your internal registry.'+
+  '</div><ol class="checklist">';
+
+  activeComps.forEach(function(ac,i){
+    var m=ac.model;if(!m)return;
+    var modelDir=storePath+'/'+m.hfId.split('/')[1];
+    var dlCmd=(m.requiresAuth?'export HF_TOKEN=hf_your_token_here\n':'')+
+      'huggingface-cli download \\\n  '+m.hfId+' \\\n  --local-dir '+modelDir+' \\\n  --local-dir-use-symlinks False';
+    html+='<li class="checklist-item">'+
+      '<div class="ci-num">'+(i+1)+'</div>'+
+      '<div class="ci-body">'+
+        '<div class="ci-title">Download '+ac.comp.label+': '+m.name+' (~'+m.sizeGB['fp16']+' GB)</div>'+
+        '<div class="ci-desc">'+codeBlock('dl-stack-'+i,dlCmd)+
+          '<div style="margin-top:4px;font-size:10px;color:var(--text-mute)">Saves to: <code>'+modelDir+'</code>'+(m.requiresAuth?' · Requires HuggingFace account + license acceptance':'')+' · License: '+m.license+'</div>'+
+        '</div>'+
+      '</div></li>';
+  });
+
+  // Docker images (deduplicated)
+  var seenImgs={};
+  var dockerLines='';
+  activeComps.forEach(function(ac,i){
+    var m=ac.model;if(!m||seenImgs[m.dockerImg])return;
+    seenImgs[m.dockerImg]=1;
+    var imgTag=m.dockerImg.replace(/[:/]/g,'_');
+    dockerLines+='# '+ac.comp.label+':\ndocker pull '+m.dockerImg+'\ndocker save '+m.dockerImg+' | gzip > '+imgTag+'.tar.gz\n# On air-gapped machine:\ndocker load < '+imgTag+'.tar.gz\ndocker tag '+m.dockerImg+' '+registry+'/'+imgTag+'\ndocker push '+registry+'/'+imgTag+'\n\n';
+  });
+  html+='<li class="checklist-item"><div class="ci-num">'+(activeComps.length+1)+'</div>'+
+    '<div class="ci-body"><div class="ci-title">Transfer Docker images to internal registry</div>'+
+    '<div class="ci-desc">'+codeBlock('dl-docker-stack',dockerLines.trim())+'</div></div></li>';
+
+  html+='<li class="checklist-item"><div class="ci-num">'+(activeComps.length+2)+'</div>'+
+    '<div class="ci-body"><div class="ci-title">Set offline environment variables on the cluster</div>'+
+    '<div class="ci-desc">'+codeBlock('dl-offline-stack','# These are already set in the K8s manifests, but also set them on the node:\nexport HF_HUB_OFFLINE=1\nexport TRANSFORMERS_OFFLINE=1\nexport HF_DATASETS_OFFLINE=1')+
+    '</div></div></li></ol>';
+
+  document.getElementById('dl-list').innerHTML=html;
+}
+
+function buildStackPrereqs(gpu,gpuCount,namespace,storePath,registry,activeComps,results){
+  var html='<div style="margin-bottom:12px;padding:10px 14px;background:var(--bg-input);border-radius:var(--r-md);font-size:12px;color:var(--text-dim);line-height:1.7">'+
+    '<strong style="color:var(--text-hi)">Run these checks before deploying.</strong> '+
+    'This multi-component system deploys '+activeComps.length+' separate Kubernetes services. All checks must pass on every GPU node.'+
+  '</div>';
+  var rows=[
+    {label:'OS',              val:'Ubuntu 22.04 LTS or RHEL 8+',     cmd:'lsb_release -a',                                                         why:'Required base OS for NVIDIA drivers and container runtime compatibility.'},
+    {label:'NVIDIA driver',   val:'≥ '+gpu.driverMin,                 cmd:'nvidia-smi --query-gpu=driver_version --format=csv,noheader',             why:'Driver must match or exceed the CUDA version inside the containers.'},
+    {label:'CUDA toolkit',    val:'≥ '+gpu.cudaMin,                   cmd:'nvcc --version',                                                          why:'CUDA provides the GPU compute layer. Must match your driver version.'},
+    {label:'Container runtime',val:'nvidia-container-toolkit ≥ 1.14', cmd:'nvidia-ctk --version',                                                    why:'Allows Docker/containerd to pass GPU resources into containers.'},
+    {label:'Kubernetes',      val:'K8s ≥ 1.26 + kubectl configured',  cmd:'kubectl version --short',                                                 why:'Required version for GPU resource scheduling and volume management.'},
+    {label:'GPU plugin',      val:'NVIDIA device plugin installed',    cmd:'kubectl get ds -n kube-system | grep nvidia',                             why:'Exposes GPU resources (nvidia.com/gpu) to Kubernetes.'},
+    {label:'Namespace',       val:namespace,                           cmd:'kubectl create namespace '+namespace+' --dry-run=client -o yaml | kubectl apply -f -',why:'Isolates all AI system components from other services.'},
+    {label:'Storage',         val:storePath+' on GPU nodes',          cmd:'ls -la '+storePath,                                                       why:'All model files must be accessible from GPU nodes via NFS or local mount.'},
+    {label:'Registry',        val:registry+' reachable',              cmd:'curl -sk https://'+registry+'/v2/',                                       why:'All '+activeComps.length+' container images are pulled from this registry.'},
+  ];
+  html+='<div>';
+  rows.forEach(function(r){
+    html+='<div class="prereq-row"><div>'+
+      '<div class="pr-label">'+r.label+'</div>'+
+      '<div class="pr-cmd">$ '+r.cmd+'</div>'+
+      '<div style="font-size:10px;color:var(--text-mute);margin-top:2px">'+r.why+'</div>'+
+    '</div><div class="pr-val">'+r.val+'</div></div>';
+  });
+  html+='</div>';
+  document.getElementById('prereq-content').innerHTML=html;
+}
+
+function buildStackConfig(activeComps,results,storePath,registry,namespace,ctx,maxSeqs,quant){
+  var html='<div style="margin-bottom:10px;font-size:12px;color:var(--text-dim)">Each component runs as a separate service. Start embedding/STT services first (fast startup), then the LLM (slowest to load).</div>';
+
+  activeComps.forEach(function(ac,i){
+    var m=ac.model;var D=results[i];if(!m||!D)return;
+    var modelDir=storePath+'/'+m.hfId.split('/')[1];
+    var svcName=m.hfId.split('/')[1].toLowerCase().replace(/[^a-z0-9]/g,'-');
+    var port=m.servePort||8000;
+    html+='<div class="comp-section"><div class="comp-section-title">'+(i+1)+'. '+ac.comp.label+' — '+m.name+'</div>'+
+      '<div class="comp-section-sub">'+D.gpusUsed+' GPU'+(D.gpusUsed!==1?'s':'')+' ('+D.util+'% VRAM) · Port '+port+'</div></div>';
+
+    var cmd='';
+    if(m.cat==='llm'||m.cat==='vlm'){
+      var dtype=m.vllmDtype||'float16';
+      cmd='python -m vllm.entrypoints.openai.api_server \\\n'+
+        '  --model '+modelDir+' \\\n'+
+        '  --tensor-parallel-size '+D.tp+' \\\n'+
+        '  --max-model-len '+Math.min(ctx,m.maxCtx||ctx)+' \\\n'+
+        '  --gpu-memory-utilization 0.85 \\\n'+
+        '  --dtype '+dtype+' \\\n'+
+        '  --max-num-seqs '+Math.ceil(maxSeqs/(D.actualReplicas||1))+' \\\n'+
+        '  --served-model-name '+svcName+' \\\n'+
+        '  --host 0.0.0.0 --port '+port+' \\\n'+
+        '  --trust-remote-code';
+    } else if(m.cat==='embedding'||m.cat==='reranker'){
+      cmd='docker run -d \\\n  --gpus all \\\n  -v '+modelDir+':/model \\\n  -p '+port+':80 \\\n'+
+        '  -e HF_HUB_OFFLINE=1 \\\n  --name '+svcName+' \\\n'+
+        '  '+registry+'/'+m.dockerImg.replace(/[:/]/g,'_')+' \\\n  --model-id /model --port 80';
+    } else if(m.cat==='stt'){
+      cmd='docker run -d \\\n  --gpus all \\\n  -v '+modelDir+':/model \\\n  -p 8002:8000 \\\n'+
+        '  -e WHISPER__MODEL=/model \\\n  -e HF_HUB_OFFLINE=1 \\\n  --name '+svcName+' \\\n'+
+        '  '+registry+'/'+m.dockerImg.replace(/[:/]/g,'_');
+    } else if(m.cat==='tts'){
+      cmd='docker run -d \\\n  --gpus all \\\n  -v '+modelDir+':/model \\\n  -p 8003:8000 \\\n'+
+        '  -e HF_HUB_OFFLINE=1 \\\n  --name '+svcName+' \\\n'+
+        '  '+registry+'/'+m.dockerImg.replace(/[:/]/g,'_');
+    }
+    if(cmd)html+=codeBlock('cfg-stack-'+i,cmd);
+  });
+
+  document.getElementById('config-content').innerHTML=html;
+}
+
+function buildStackK8s(activeComps,results,gpu,gpuCount,quant,ctx,maxSeqs,storePath,registry,namespace){
+  var yaml='# ─── Namespace ───────────────────────────────────────\napiVersion: v1\nkind: Namespace\nmetadata:\n  name: '+namespace+'\n---\n'+
+    '# ─── Shared PVC (all components read models from here) ─\napiVersion: v1\nkind: PersistentVolumeClaim\nmetadata:\n  name: ai-models-pvc\n  namespace: '+namespace+'\nspec:\n  accessModes:\n    - ReadWriteMany\n  resources:\n    requests:\n      storage: 1Ti\n  storageClassName: nfs-client\n---\n';
+
+  activeComps.forEach(function(ac,i){
+    var m=ac.model;var D=results[i];if(!m||!D)return;
+    var svcName=m.hfId.split('/')[1].toLowerCase().replace(/[^a-z0-9]/g,'-');
+    var port=m.servePort||8000;
+    var imgFull=registry+'/'+m.dockerImg.replace(/[:/]/g,'_');
+    var dtype=m.vllmDtype||'float16';
+    var replicas=D.actualReplicas||1;
+    var ctxCapped=Math.min(ctx,m.maxCtx||ctx);
+    var memReq=Math.round((m.sizeGB[quant]||m.sizeGB.fp16)*2);
+    var memLim=memReq*2;
+    var cpuReq=D.tp*4;var cpuLim=D.tp*8;
+    var liveDelay=(m.cat==='llm'||m.cat==='vlm')?240:60;
+    var readyDelay=(m.cat==='llm'||m.cat==='vlm')?180:30;
+
+    var containerSpec='';
+    if(m.cat==='llm'||m.cat==='vlm'){
+      containerSpec=
+        '        command: ["python","-m","vllm.entrypoints.openai.api_server"]\n'+
+        '        args:\n'+
+        '        - "--model"\n        - "/models/'+m.hfId.split('/')[1]+'"\n'+
+        '        - "--tensor-parallel-size"\n        - "'+D.tp+'"\n'+
+        '        - "--max-model-len"\n        - "'+ctxCapped+'"\n'+
+        '        - "--gpu-memory-utilization"\n        - "0.85"\n'+
+        '        - "--dtype"\n        - "'+dtype+'"\n'+
+        '        - "--max-num-seqs"\n        - "'+Math.ceil(maxSeqs/replicas)+'"\n'+
+        '        - "--served-model-name"\n        - "'+svcName+'"\n'+
+        '        - "--host"\n        - "0.0.0.0"\n'+
+        '        - "--port"\n        - "'+port+'"\n'+
+        '        - "--trust-remote-code"\n'+
+        '        env:\n'+
+        '        - name: HF_HUB_OFFLINE\n          value: "1"\n'+
+        '        - name: TRANSFORMERS_OFFLINE\n          value: "1"\n'+
+        '        - name: HF_DATASETS_OFFLINE\n          value: "1"\n';
+    } else if(m.cat==='embedding'||m.cat==='reranker'){
+      containerSpec=
+        '        command: ["text-embeddings-router"]\n'+
+        '        args:\n'+
+        '        - "--model-id"\n        - "/models/'+m.hfId.split('/')[1]+'"\n'+
+        '        - "--port"\n        - "80"\n'+
+        '        env:\n'+
+        '        - name: HF_HUB_OFFLINE\n          value: "1"\n';
+      port=80;
+    } else if(m.cat==='stt'){
+      containerSpec=
+        '        env:\n'+
+        '        - name: WHISPER__MODEL\n          value: "/models/'+m.hfId.split('/')[1]+'"\n'+
+        '        - name: HF_HUB_OFFLINE\n          value: "1"\n'+
+        '        - name: TRANSFORMERS_OFFLINE\n          value: "1"\n';
+    } else {
+      containerSpec='        env:\n        - name: HF_HUB_OFFLINE\n          value: "1"\n';
+    }
+
+    yaml+='# ─── ['+(i+1)+'] '+ac.comp.label+': '+m.name+' ─────────\n'+
+      'apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: '+svcName+'\n  namespace: '+namespace+'\n  labels:\n    app: '+svcName+'\n    system-component: "'+ac.comp.id+'"\n'+
+      'spec:\n  replicas: '+replicas+'  # '+replicas+' replica'+(replicas>1?'s':'')+' × '+D.tp+' GPU each\n'+
+      '  selector:\n    matchLabels:\n      app: '+svcName+'\n'+
+      '  template:\n    metadata:\n      labels:\n        app: '+svcName+'\n    spec:\n      containers:\n      - name: '+svcName+'\n        image: '+imgFull+'\n'+
+      containerSpec+
+      '        ports:\n        - containerPort: '+port+'\n'+
+      '        resources:\n          limits:\n            nvidia.com/gpu: "'+D.tp+'"\n            memory: "'+memLim+'Gi"\n            cpu: "'+cpuLim+'"\n          requests:\n            nvidia.com/gpu: "'+D.tp+'"\n            memory: "'+memReq+'Gi"\n            cpu: "'+cpuReq+'"\n'+
+      '        volumeMounts:\n        - name: model-storage\n          mountPath: /models\n'+
+      '        livenessProbe:\n          httpGet:\n            path: /health\n            port: '+port+'\n          initialDelaySeconds: '+liveDelay+'\n          periodSeconds: 30\n          failureThreshold: 3\n'+
+      '        readinessProbe:\n          httpGet:\n            path: /health\n            port: '+port+'\n          initialDelaySeconds: '+readyDelay+'\n          periodSeconds: 10\n          failureThreshold: 5\n'+
+      '      volumes:\n      - name: model-storage\n        persistentVolumeClaim:\n          claimName: ai-models-pvc\n'+
+      '      nodeSelector:\n        nvidia.com/gpu: "true"\n'+
+      '      tolerations:\n      - key: "nvidia.com/gpu"\n        operator: "Exists"\n        effect: "NoSchedule"\n---\n'+
+      'apiVersion: v1\nkind: Service\nmetadata:\n  name: '+svcName+'-svc\n  namespace: '+namespace+'\n  labels:\n    system-component: "'+ac.comp.id+'"\nspec:\n  selector:\n    app: '+svcName+'\n  ports:\n  - name: http\n    port: '+port+'\n    targetPort: '+port+'\n  type: ClusterIP\n---\n';
+  });
+
+  var applyCmd='# Apply the full stack in one command:\nkubectl apply -f '+namespace+'-stack.yaml\n\n# Watch all pods start:\nkubectl get pods -n '+namespace+' -w\n\n# Confirm all services:\nkubectl get svc -n '+namespace;
+
+  var intro='<div style="margin-bottom:12px;padding:10px 14px;background:var(--bg-input);border-radius:var(--r-md);font-size:12px;color:var(--text-dim);line-height:1.7">'+
+    '<strong style="color:var(--text-hi)">One YAML deploys all '+activeComps.length+' components.</strong> '+
+    'Contains: 1 Namespace · 1 PVC (shared storage) · '+activeComps.length+' Deployments · '+activeComps.length+' Services.<br>'+
+    'Copy the YAML below and apply with: <code>kubectl apply -f filename.yaml</code>'+
+  '</div>';
+
+  document.getElementById('k8s-content').innerHTML=intro+codeBlock('k8s-stack-yaml',yaml,'Copy Full YAML')+
+    '<div style="margin-top:14px"><div class="rcard-title">Apply & Monitor</div>'+codeBlock('k8s-stack-apply',applyCmd)+'</div>';
+}
+
+function buildStackValidate(activeComps,namespace){
+  var html='<div style="margin-bottom:12px;padding:10px 14px;background:var(--bg-input);border-radius:var(--r-md);font-size:12px;color:var(--text-dim);line-height:1.7">'+
+    '<strong style="color:var(--text-hi)">Validate each component in order.</strong> '+
+    'Test embedding/STT first (fast to start). The LLM takes longest — allow 3–10 minutes. Use port-forward to test from your local machine.'+
+  '</div>';
+
+  activeComps.forEach(function(ac,i){
+    var m=ac.model;if(!m)return;
+    var svcName=m.hfId.split('/')[1].toLowerCase().replace(/[^a-z0-9]/g,'-');
+    var port=m.servePort||8000;
+    if(m.cat==='embedding'||m.cat==='reranker')port=80;
+    html+='<div class="comp-section"><div class="comp-section-title">'+(i+1)+'. '+ac.comp.label+' — '+m.name+'</div>'+
+      '<div class="comp-section-sub">Service: '+svcName+'-svc · Port: '+port+'</div></div>';
+
+    var pfCmd='kubectl port-forward -n '+namespace+' svc/'+svcName+'-svc '+port+':'+port+' &\ncurl http://localhost:'+port+'/health';
+    html+=codeBlock('val-health-'+i,pfCmd);
+    html+='<div style="font-size:11px;background:var(--bg-input);border-left:3px solid var(--accent);padding:6px 10px;border-radius:0 var(--r-sm) var(--r-sm) 0;margin:4px 0 10px;color:var(--text-dim)">'+
+      '✓ Expected: HTTP 200. LLM pods may take 3–10 minutes to become ready — this is normal.</div>';
+
+    if(m.cat==='llm'||m.cat==='vlm'){
+      var testCmd='curl http://localhost:'+port+'/v1/chat/completions \\\n  -H "Content-Type: application/json" \\\n'+
+        '  -d \'{"model":"'+svcName+'","messages":[{"role":"user","content":"Say hello in one sentence."}],"max_tokens":50}\'';
+      html+=codeBlock('val-infer-'+i,testCmd);
+      html+='<div style="font-size:11px;background:var(--bg-input);border-left:3px solid var(--accent);padding:6px 10px;border-radius:0 var(--r-sm) var(--r-sm) 0;margin:4px 0 14px;color:var(--text-dim)">'+
+        '✓ Expected: JSON with choices[0].message.content containing a response.</div>';
+    } else if(m.cat==='embedding'){
+      var embCmd='curl http://localhost:'+port+'/v1/embeddings \\\n  -H "Content-Type: application/json" \\\n  -d \'{"input":"Test document","model":"'+svcName+'"}\'';
+      html+=codeBlock('val-emb-'+i,embCmd);
+      html+='<div style="font-size:11px;background:var(--bg-input);border-left:3px solid var(--accent);padding:6px 10px;border-radius:0 var(--r-sm) var(--r-sm) 0;margin:4px 0 14px;color:var(--text-dim)">'+
+        '✓ Expected: JSON with data[0].embedding — a long array of float numbers.</div>';
+    } else if(m.cat==='reranker'){
+      var rerankCmd='curl http://localhost:'+port+'/rerank \\\n  -H "Content-Type: application/json" \\\n  -d \'{"query":"What is AI?","texts":["AI is a field of computer science.","The weather is sunny."]}\'';
+      html+=codeBlock('val-rerank-'+i,rerankCmd);
+      html+='<div style="font-size:11px;background:var(--bg-input);border-left:3px solid var(--accent);padding:6px 10px;border-radius:0 var(--r-sm) var(--r-sm) 0;margin:4px 0 14px;color:var(--text-dim)">'+
+        '✓ Expected: JSON with scores — first text should score higher.</div>';
+    } else if(m.cat==='stt'){
+      html+=codeBlock('val-stt-'+i,'# Record a short audio file first:\narecord -d 3 -f S16_LE -r 16000 test.wav\n\n# Transcribe it:\ncurl http://localhost:8002/v1/audio/transcriptions \\\n  -F "file=@test.wav" -F "model=whisper-1"');
+      html+='<div style="font-size:11px;background:var(--bg-input);border-left:3px solid var(--accent);padding:6px 10px;border-radius:0 var(--r-sm) var(--r-sm) 0;margin:4px 0 14px;color:var(--text-dim)">'+
+        '✓ Expected: JSON with "text" containing the transcription of your audio.</div>';
+    } else if(m.cat==='tts'){
+      html+=codeBlock('val-tts-'+i,'curl http://localhost:8003/v1/audio/speech \\\n  -H "Content-Type: application/json" \\\n  -d \'{"input":"Hello, this is a test.","voice":"af_bella"}\' \\\n  --output test.wav\naplay test.wav');
+      html+='<div style="font-size:11px;background:var(--bg-input);border-left:3px solid var(--accent);padding:6px 10px;border-radius:0 var(--r-sm) var(--r-sm) 0;margin:4px 0 14px;color:var(--text-dim)">'+
+        '✓ Expected: test.wav file plays back speech. If no audio, check aplay output device.</div>';
+    }
+  });
+
+  document.getElementById('validate-content').innerHTML=html;
+}
+
+function buildStackTroubleshoot(activeComps,results,gpu,gpuCount,quant){
+  var registryVal=document.getElementById('inp-registry').value||'registry.internal:5000';
+  var nsVal=document.getElementById('inp-namespace').value||'ai-workloads';
+  var issues=[
+    {q:'1. A pod is stuck in Pending state',
+     a:'The scheduler cannot find a node with enough free GPUs.\n\n$ kubectl describe pod -n '+nsVal+' <pod-name>\n# Look for: "Insufficient nvidia.com/gpu"\n\n# Check free GPU resources on nodes:\n$ kubectl describe nodes | grep -A5 "Allocated resources"\n\n# Check how many GPUs are already used:\n$ kubectl get pods -n '+nsVal+' -o wide\n\n# Check NVIDIA device plugin is running:\n$ kubectl get pods -n kube-system | grep nvidia'},
+    {q:'2. LLM pod takes too long to start (readiness probe fails)',
+     a:'Large models take 3–15 minutes to load from disk into GPU memory. This is normal.\n\n# Watch loading logs:\n$ kubectl logs -n '+nsVal+' -l system-component=llm -f\n# Wait for: "Application startup complete."\n\n# If probe times out before model loads, increase in manifest:\nreadinessProbe:\n  initialDelaySeconds: 360  # 6 minutes\n  failureThreshold: 30'},
+    {q:'3. CUDA out of memory on one component',
+     a:'The model + KV cache exceeds available VRAM on that component\'s GPU.\n\n# Check which component is OOM:\n$ kubectl logs -n '+nsVal+' <pod-name> | grep -i "out of memory"\n\n# For the LLM, reduce memory use:\n  --max-model-len 4096\n  --max-num-seqs 4\n  --gpu-memory-utilization 0.80\n\n# Embedding/reranker models rarely OOM — if they do, reduce --max-client-batch-size'},
+    {q:'4. Components cannot reach each other inside the cluster',
+     a:'Services communicate via ClusterIP DNS — use the Kubernetes service name, not localhost.\n\n# Address pattern for any service in this system:\n# <service-name>-svc.'+nsVal+'.svc.cluster.local:<port>\n\n# Test connectivity from inside the cluster:\n$ kubectl run test --rm -it --image=curlimages/curl -- \\\n  curl http://<service-name>-svc.'+nsVal+'.svc.cluster.local:<port>/health\n\n# List all services and their ports:\n$ kubectl get svc -n '+nsVal},
+    {q:'5. Image pull error (ErrImagePull) on a component',
+     a:'That component\'s Docker image is missing from the internal registry.\n\n# Check which image failed:\n$ kubectl describe pod <pod-name> -n '+nsVal+' | grep -A3 "Failed"\n\n# Check what images exist in the registry:\n$ curl -sk https://'+registryVal+'/v2/_catalog\n\n# If missing, go back to the Pre-Download tab and transfer that image to the registry.'},
+    {q:'6. Slow inference despite GPU being loaded',
+     a:'GPU utilisation may be low because requests are not batched efficiently.\n\n# Check GPU utilisation live:\n$ nvidia-smi dmon -s mu -d 1\n\n# If GPU is < 50% during requests, check:\n# 1. vLLM --max-num-seqs is not too low (should match your concurrent users)\n# 2. Clients are sending requests concurrently, not sequentially\n# 3. Context length is not extremely short (tiny requests don\'t saturate the GPU)\n\n# Check vLLM request queue:\n$ curl http://localhost:<port>/metrics | grep num_requests'},
+    {q:'7. Embedding returns wrong-dimension vectors',
+     a:'The vector dimension must match what your vector database expects.\n\n# Check the model\'s output dimension:\n$ curl http://localhost:<port>/info\n\n# BGE-M3: 1024 dimensions\n# BGE-Large-EN: 1024 dimensions\n\n# If your vector DB expects a different size:\n# 1. Recreate the collection with the correct dimension\n# 2. Or switch to an embedding model with the right dimension'},
+  ];
+
+  var html='<div style="margin-bottom:12px;padding:10px 14px;background:var(--bg-input);border-radius:var(--r-md);font-size:12px;color:var(--text-dim)">'+
+    'For multi-component systems: always diagnose each service individually. A failing embedding service does not affect the LLM.'+
+  '</div><div id="ts-list">';
+
+  issues.forEach(function(issue,i){
+    html+='<div class="ts-item" id="ts-'+i+'">'+
+      '<div class="ts-q" onclick="toggleTS('+i+')">'+issue.q+'<span class="ts-arrow">&#9654;</span></div>'+
+      '<div class="ts-a"><pre style="font-family:\'SF Mono\',Consolas,monospace;font-size:11px;line-height:1.7;white-space:pre-wrap;color:var(--text-mid)">'+escHtml(issue.a)+'</pre></div>'+
+    '</div>';
+  });
+  html+='</div>';
+  document.getElementById('troubleshoot-content').innerHTML=html;
 }
 
 /* ═══════════════════════════════════════
@@ -1412,8 +1955,7 @@ document.addEventListener('DOMContentLoaded',function(){
   var t=localStorage.getItem('gpu_calc_theme');
   var btn=document.getElementById('theme-btn');
   if(t==='light'){document.body.classList.add('light');if(btn)btn.textContent='Dark';}
-  populateModels(document.getElementById('inp-usecase').value);
-  generate();
+  onUseCaseChange();
 });
 </script>
 </body>
